@@ -221,6 +221,15 @@ async def get_users_in_session(session_id: int):
         return data
 
 
+async def get_session_master(session_id: int):
+    async with aiosqlite.connect(db_path) as db:
+        async with db.execute(f"SELECT Games.master_id, Users.name FROM Sessions "
+                              f"JOIN Games ON Games.id=Sessions.game_id JOIN Users ON Users.id=Games.master_id "
+                              f"WHERE Sessions.id={session_id}") as cursor:
+            data = await cursor.fetchone()
+        return data
+
+
 async def leave_session(user_id: int):
     async with aiosqlite.connect(db_path) as db:
         await db.execute(f"DELETE FROM Session_connections WHERE user_id={user_id}")
@@ -510,6 +519,10 @@ if __name__ == "__main__":
         elif command == "sessionPlayers":
             user_id = _input_user_id()
             print(asyncio.run(get_users_in_session(asyncio.run(get_user_session(user_id)).session_id)))
+
+        elif command == "sessionMaster":
+            session_id = _input_number("session_id")
+            print(asyncio.run(get_session_master(session_id)))
         elif command == "getAvailableSessions":
             user_id = _input_user_id()
             sessions_list = asyncio.run(get_available_sessions(user_id))
