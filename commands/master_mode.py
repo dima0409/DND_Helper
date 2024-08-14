@@ -1,5 +1,5 @@
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
-from keyboards import master_mode_keyboard, game_edit_keyboard, confirm_cancel_keyboard
+from commands.keyboards import master_mode_keyboard, game_edit_keyboard, confirm_cancel_keyboard
 from db.db_manager import create_game, get_user_games, add_game_location, send_game_request, get_masters_games_request, approve_request,start_session,get_users_in_session,stop_session,get_session_master
 
 
