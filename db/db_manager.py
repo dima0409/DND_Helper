@@ -25,6 +25,12 @@ async def signup_user(user_id: int, name: str):
         await db.commit()
 
 
+async def change_user_name(user_id: int, name: str):
+    async with aiosqlite.connect(db_path) as db:
+        await db.execute(f"UPDATE Users SET name={name} WHERE id={user_id}")
+        await db.commit()
+
+
 async def create_game(user_id: int, name: str, description: str):
     async with aiosqlite.connect(db_path) as db:
         await db.execute("INSERT INTO Games (master_id, name, description) VALUES (?, ?, ?)",
@@ -38,6 +44,24 @@ async def get_user_games(user_id: int):
                 f"SELECT * FROM Games WHERE master_id={user_id}") as cursor:
             answer = await cursor.fetchall()
         return list(map(lambda x: GameModelForMaster(game_id=x[0], master=x[1], name=x[2], description=x[3]), answer))
+
+
+async def update_game_name(game_id: int, name: str):
+    async with aiosqlite.connect(db_path) as db:
+        await db.execute(f"UPDATE Games SET name={name} WHERE id={game_id}")
+        await db.commit()
+
+
+async def update_game_description(game_id: int, description: str):
+    async with aiosqlite.connect(db_path) as db:
+        await db.execute(f"UPDATE Games SET description={description} WHERE id={game_id}")
+        await db.commit()
+
+
+async def delete_game(game_id: int):
+    async with aiosqlite.connect(db_path) as db:
+        await db.execute(f"DELETE FROM Games WHERE id={game_id}")
+        await db.commit()
 
 
 async def get_game_locations(game_id: int):
@@ -83,6 +107,24 @@ async def add_game_location(game_id: int, location_name: str, location_descripti
     async with aiosqlite.connect(db_path) as db:
         await db.execute("INSERT INTO Locations (game_id, name, description, parent_location_id) VALUES (?, ?, ?, ?)",
                          (game_id, location_name, location_description, parent_location))
+        await db.commit()
+
+
+async def change_location_name(location_id: int, location_name: str):
+    async with aiosqlite.connect(db_path) as db:
+        await db.execute(f"UPDATE Locations SET name={location_name} WHERE id={location_id}")
+        await db.commit()
+
+
+async def change_location_description(location_id: int, location_description: str):
+    async with aiosqlite.connect(db_path) as db:
+        await db.execute(f"UPDATE Locations description name={location_description} WHERE id={location_id}")
+        await db.commit()
+
+
+async def delete_location(location_id: int):
+    async with aiosqlite.connect(db_path) as db:
+        await db.execute(f"DELETE FROM Locations WHERE id={location_id}")
         await db.commit()
 
 
