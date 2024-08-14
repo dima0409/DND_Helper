@@ -191,12 +191,26 @@ async def stop_session(user_id: int):
         await db.commit()
 
 
+async def block_session(user_id: int):
+    async with aiosqlite.connect(db_path) as db:
+        await db.execute(f"UPDATE Sessions SET game_progress=1 "
+                         f"WHERE game_id IN (SELECT id FROM Games WHERE master_id={user_id})")
+        await db.commit()
+
+
+async def unblock_session(user_id: int):
+    async with aiosqlite.connect(db_path) as db:
+        await db.execute(f"UPDATE Sessions SET game_progress=0 "
+                         f"WHERE game_id IN (SELECT id FROM Games WHERE master_id={user_id})")
+        await db.commit()
+
+
 async def get_available_sessions(user_id: int):
     async with aiosqlite.connect(db_path) as db:
         async with db.execute(f"""SELECT Sessions.id, Sessions.game_id, Games.name, Sessions.game_progress, 
                               Sessions.started_at
                               FROM Sessions JOIN Games ON Games.id=Sessions.game_id
-                              WHERE game_id IN (SELECT game_id Games_request WHERE user_id={user_id} AND approved!=0)
+                              WHERE game_id IN (SELECT game_id FROM Games_request WHERE user_id={user_id} AND approved!=0)
                               AND game_progress=0""") as cursor:
             data = await cursor.fetchall()
         if data is None:
@@ -431,6 +445,15 @@ if __name__ == "__main__":
             if not asyncio.run(join_session(user_id, session_id, password)):
                 print("Error")
 
+        elif command == "sessionBlock":
+            user_id = _input_user_id()
+            if _input_confirm():
+                asyncio.run(block_session(user_id))
+
+        elif command == "sessionUnblock":
+            user_id = _input_user_id()
+            if _input_confirm():
+                asyncio.run(unblock_session(user_id))
         elif command == "sessionLeave":
             user_id = _input_user_id()
             if _input_confirm():
