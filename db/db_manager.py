@@ -164,6 +164,12 @@ async def approve_request(request_id: int):
         await db.commit()
 
 
+async def reject_request(request_id: int):
+    async with aiosqlite.connect(db_path) as db:
+        await db.execute(f"DELETE FROM Games_request WHERE id={request_id}")
+        await db.commit()
+
+
 async def get_info_about_game(game_id: int):
     async with aiosqlite.connect(db_path) as db:
         async with db.execute(f"SELECT Games.id, Games.name, Games.description, Users.id, Users.name FROM Games"
@@ -474,6 +480,19 @@ if __name__ == "__main__":
             if _input_confirm("Confirm approving request"):
                 asyncio.run(approve_request(request_id))
 
+        elif command == "rejectRequest":
+            user_id = _input_user_id()
+            requests_list = asyncio.run(get_masters_games_request(user_id))
+            print(f"Found {len(requests_list)} requests\n")
+
+            for index, item in enumerate(requests_list):
+                print(item, "\n")
+
+            print("Choose request")
+            request_id = _input_number("request id")
+            if _input_confirm("Confirm rejecting request"):
+                asyncio.run(reject_request(request_id))
+
         elif command == "sessionStart":
             user_id = _input_user_id()
             game_id = _input_game_id(user_id)
@@ -512,10 +531,12 @@ if __name__ == "__main__":
             user_id = _input_user_id()
             if _input_confirm():
                 asyncio.run(unblock_session(user_id))
+
         elif command == "sessionLeave":
             user_id = _input_user_id()
             if _input_confirm():
                 asyncio.run(leave_session(user_id))
+
         elif command == "sessionPlayers":
             user_id = _input_user_id()
             print(asyncio.run(get_users_in_session(asyncio.run(get_user_session(user_id)).session_id)))
@@ -523,6 +544,7 @@ if __name__ == "__main__":
         elif command == "sessionMaster":
             session_id = _input_number("session_id")
             print(asyncio.run(get_session_master(session_id)))
+
         elif command == "getAvailableSessions":
             user_id = _input_user_id()
             sessions_list = asyncio.run(get_available_sessions(user_id))
