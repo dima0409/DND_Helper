@@ -276,6 +276,31 @@ async def get_available_sessions(user_id: int):
                                                started_at=x[4], is_master=False), data))
 
 
+async def create_npc(game_id: int, name: str, description: str):
+    async with aiosqlite.connect(db_path) as db:
+        await db.execute("INSERT INTO NPCs (name, description, game_id) VALUES (?, ?, ?)",
+                         (name, description, game_id))
+        await db.commit()
+
+
+async def delete_npc(npc_id: int):
+    async with aiosqlite.connect(db_path) as db:
+        await db.execute(f"DELETE FROM NPCs WHERE id={npc_id}")
+        await db.commit()
+
+
+async def update_npc_name(npc_id: int, npc_name: str):
+    async with aiosqlite.connect(db_path) as db:
+        await db.execute(f"UPDATE NPCs SET name={npc_name} WHERE id={npc_id}")
+        await db.commit()
+
+
+async def update_npc_description(npc_id: int, npc_description: str):
+    async with aiosqlite.connect(db_path) as db:
+        await db.execute(f"UPDATE NPCs SET description={npc_description} WHERE id={npc_id}")
+        await db.commit()
+
+
 def _input_number(number_name: str):
     while True:
         chat_id = input(f"Enter {number_name}: ")
