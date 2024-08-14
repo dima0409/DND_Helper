@@ -25,6 +25,12 @@ async def signup_user(user_id: int, name: str):
         await db.commit()
 
 
+async def change_user_name(user_id: int, name: str):
+    async with aiosqlite.connect(db_path) as db:
+        await db.execute(f"UPDATE Users SET name={name} WHERE id={user_id}")
+        await db.commit()
+
+
 async def create_game(user_id: int, name: str, description: str):
     async with aiosqlite.connect(db_path) as db:
         await db.execute("INSERT INTO Games (master_id, name, description) VALUES (?, ?, ?)",
@@ -38,6 +44,24 @@ async def get_user_games(user_id: int):
                 f"SELECT * FROM Games WHERE master_id={user_id}") as cursor:
             answer = await cursor.fetchall()
         return list(map(lambda x: GameModelForMaster(game_id=x[0], master=x[1], name=x[2], description=x[3]), answer))
+
+
+async def update_game_name(game_id: int, name: str):
+    async with aiosqlite.connect(db_path) as db:
+        await db.execute(f"UPDATE Games SET name={name} WHERE id={game_id}")
+        await db.commit()
+
+
+async def update_game_description(game_id: int, description: str):
+    async with aiosqlite.connect(db_path) as db:
+        await db.execute(f"UPDATE Games SET description={description} WHERE id={game_id}")
+        await db.commit()
+
+
+async def delete_game(game_id: int):
+    async with aiosqlite.connect(db_path) as db:
+        await db.execute(f"DELETE FROM Games WHERE id={game_id}")
+        await db.commit()
 
 
 async def get_game_locations(game_id: int):
@@ -83,6 +107,24 @@ async def add_game_location(game_id: int, location_name: str, location_descripti
     async with aiosqlite.connect(db_path) as db:
         await db.execute("INSERT INTO Locations (game_id, name, description, parent_location_id) VALUES (?, ?, ?, ?)",
                          (game_id, location_name, location_description, parent_location))
+        await db.commit()
+
+
+async def change_location_name(location_id: int, location_name: str):
+    async with aiosqlite.connect(db_path) as db:
+        await db.execute(f"UPDATE Locations SET name={location_name} WHERE id={location_id}")
+        await db.commit()
+
+
+async def change_location_description(location_id: int, location_description: str):
+    async with aiosqlite.connect(db_path) as db:
+        await db.execute(f"UPDATE Locations description name={location_description} WHERE id={location_id}")
+        await db.commit()
+
+
+async def delete_location(location_id: int):
+    async with aiosqlite.connect(db_path) as db:
+        await db.execute(f"DELETE FROM Locations WHERE id={location_id}")
         await db.commit()
 
 
@@ -313,7 +355,7 @@ def _input_confirm(text: str = "Confirm"):
             return False
 
 
-def __input_game_id(user_id: int):
+def _input_game_id(user_id: int):
     games_list = asyncio.run(get_user_games(user_id))
     print(f"Found {len(games_list)} games\n")
     for index, item in enumerate(games_list):
@@ -340,6 +382,16 @@ if __name__ == "__main__":
             user_id = _input_user_id()
             print("already signUp" if asyncio.run(is_user_signup(user_id))
                   else "need signUp (you can use <signUp> command)")
+
+        elif command == "userUpdate":
+            user_id = _input_user_id()
+            name = input("Enter user name: ")
+
+            print(f"User with data: chat_id - {user_id}, name - {name}")
+
+            if _input_confirm():
+                asyncio.run(change_user_name(user_id, name))
+
         elif command == "gameCreate":
             user_id = _input_user_id()
             name = input("Enter game name: ")
@@ -347,6 +399,29 @@ if __name__ == "__main__":
             print(f"Game with data: user - {user_id}, name - {name}, description - {description}")
             if _input_confirm():
                 asyncio.run(create_game(user_id, name, description))
+
+        elif command == "gameUpdateName":
+            user_id = _input_user_id()
+            game_id = _input_game_id(user_id)
+            name = input("Enter game name: ")
+            print(f"Game with data: game_id - {game_id}, name - {name}")
+            if _input_confirm():
+                asyncio.run(update_game_name(game_id, name))
+
+        elif command == "gameUpdateDescription":
+            user_id = _input_user_id()
+            game_id = _input_game_id(user_id)
+            description = input("Enter game description: ")
+            print(f"Game with data: game_id - {game_id}, description - {description}")
+            if _input_confirm():
+                asyncio.run(update_game_description(game_id, description))
+
+        elif command == "gameDelete":
+            user_id = _input_user_id()
+            game_id = _input_game_id(user_id)
+            if _input_confirm():
+                asyncio.run(delete_game(game_id))
+
         elif command == "gamesList":
             user_id = _input_user_id()
             games_list = asyncio.run(get_user_games(user_id))
@@ -356,7 +431,7 @@ if __name__ == "__main__":
 
         elif command == "locationsList":
             user_id = _input_user_id()
-            game_id = __input_game_id(user_id)
+            game_id = _input_game_id(user_id)
             locations = asyncio.run(get_game_locations(game_id))
             print(f"Found {len(locations)} locations\n")
             for index, item in enumerate(locations):
@@ -364,7 +439,7 @@ if __name__ == "__main__":
 
         elif command == "locationCreate":
             user_id = _input_user_id()
-            game_id = __input_game_id(user_id)
+            game_id = _input_game_id(user_id)
             name = input("Enter location name: ")
             description = input("Enter location description: ")
             parent_loc = None
@@ -374,6 +449,49 @@ if __name__ == "__main__":
                   f" parent location - {parent_loc}")
             if _input_confirm():
                 asyncio.run(add_game_location(game_id, name, description, parent_loc))
+
+        elif command == "locationUpdateName":
+            user_id = _input_user_id()
+            game_id = _input_game_id(user_id)
+            locations = asyncio.run(get_game_locations(game_id))
+            print(f"Found {len(locations)} locations\n")
+            for index, item in enumerate(locations):
+                print(item)
+
+            print("Choose location")
+            location_id = _input_number("location_id")
+            name = input("New name: ")
+            print(f"Change location {location_id} name to {name}")
+            if _input_confirm():
+                asyncio.run(change_location_name(location_id, name))
+
+        elif command == "locationUpdateDescription":
+            user_id = _input_user_id()
+            game_id = _input_game_id(user_id)
+            locations = asyncio.run(get_game_locations(game_id))
+            print(f"Found {len(locations)} locations\n")
+            for index, item in enumerate(locations):
+                print(item)
+
+            print("Choose location")
+            location_id = _input_number("location_id")
+            description = input("New description: ")
+            print(f"Change location {location_id} description to {description}")
+            if _input_confirm():
+                asyncio.run(change_location_description(location_id, description))
+
+        elif command == "locationDelete":
+            user_id = _input_user_id()
+            game_id = _input_game_id(user_id)
+            locations = asyncio.run(get_game_locations(game_id))
+            print(f"Found {len(locations)} locations\n")
+            for index, item in enumerate(locations):
+                print(item)
+
+            print("Choose location")
+            location_id = _input_number("location_id")
+            if _input_confirm():
+                asyncio.run(delete_location(location_id))
 
         elif command == "gameRequest":
             user_id = _input_user_id()
@@ -418,7 +536,7 @@ if __name__ == "__main__":
 
         elif command == "sessionStart":
             user_id = _input_user_id()
-            game_id = __input_game_id(user_id)
+            game_id = _input_game_id(user_id)
             password = _input_number("password")
             if _input_confirm():
                 asyncio.run(start_session(game_id, password, time.time()))
