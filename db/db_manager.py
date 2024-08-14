@@ -98,7 +98,7 @@ async def get_users_games_request(user_id: int, only_approved: bool = False):
         async with db.execute(f"SELECT Games_request.id, Games_request.game_id, Games.name, Games_request.approved"
                               f" FROM Games_request JOIN Games ON Games.id=Games_request.game_id"
                               f" WHERE Games_request.user_id={user_id}"
-                              f" {"AND Games_request.approved != 0" if only_approved else ""}") as cursor:
+                              f" {'AND Games_request.approved != 0' if only_approved else ''}") as cursor:
             data = await cursor.fetchall()
         return list(
             map(lambda x: GameRequestForSender(request_id=x[0], game_id=x[1], game_name=x[2], approved=x[3]), data))
@@ -140,14 +140,14 @@ async def start_session(game_id: int, password: int, timestamp):
         await db.commit()
 
 
-async def join_session(user_id: int, game_id: int, password: int):
+async def join_session(user_id: int, session_id: int, password: int):
     async with aiosqlite.connect(db_path) as db:
-        async with db.execute(f"SELECT id, password FROM Sessions WHERE game_id={game_id}") as cursor:
+        async with db.execute(f"SELECT password FROM Sessions WHERE game_id={game_id}") as cursor:
             data = await cursor.fetchone()
-        if data[1] != password:
+        if data[0] != password:
             return False
         await db.execute("INSERT INTO Session_connections (user_id, session_id) VALUES (?, ?)",
-                         (user_id, data[0]))
+                         (user_id, session_id))
         await db.commit()
         return True
 
@@ -189,6 +189,20 @@ async def stop_session(user_id: int):
     async with aiosqlite.connect(db_path) as db:
         await db.execute(f"DELETE FROM Sessions WHERE game_id IN (SELECT id FROM Games WHERE master_id={user_id})")
         await db.commit()
+
+
+async def get_available_sessions(user_id: int):
+    async with aiosqlite.connect(db_path) as db:
+        async with db.execute(f"""SELECT Sessions.id, Sessions.game_id, Games.name, Sessions.game_progress, 
+                              Sessions.started_at
+                              FROM Sessions JOIN Games ON Games.id=Sessions.game_id
+                              WHERE game_id IN (SELECT game_id Games_request WHERE user_id={user_id} AND approved!=0)
+                              AND game_progress=0""") as cursor:
+            data = await cursor.fetchall()
+        if data is None:
+            return None
+        return list(map(lambda x: SessionModel(session_id=x[0], game_id=x[1], game_name=x[2], in_progress=bool(x[3]),
+                                               started_at=x[4], is_master=False), data))
 
 
 # async def create_session(user_id: int, session: str):
@@ -406,15 +420,15 @@ if __name__ == "__main__":
 
         elif command == "sessionJoin":
             user_id = _input_user_id()
-            games_list = asyncio.run(get_users_games_request(user_id, True))
-            print(f"Found {len(games_list)} games\n")
-            for index, item in enumerate(games_list):
+            sessions_list = asyncio.run(get_available_sessions(user_id))
+            print(f"Found {len(sessions_list)} sessions\n")
+            for index, item in enumerate(sessions_list):
                 print(item, "\n")
-            print("Choose game")
-            game_id = _input_number("game_id")
+            print("Choose sessions")
+            session_id = _input_number("session_id")
             password = _input_number("password")
             _input_confirm("Confirm join")
-            if not asyncio.run(join_session(user_id, game_id, password)):
+            if not asyncio.run(join_session(user_id, session_id, password)):
                 print("Error")
 
         elif command == "sessionLeave":
@@ -424,5 +438,11 @@ if __name__ == "__main__":
         elif command == "sessionPlayers":
             user_id = _input_user_id()
             print(asyncio.run(get_users_in_session(asyncio.run(get_user_session(user_id)).session_id)))
+        elif command == "getAvailableSessions":
+            user_id = _input_user_id()
+            sessions_list = asyncio.run(get_available_sessions(user_id))
+            print(f"Found {len(sessions_list)} sessions\n")
+            for index, item in enumerate(sessions_list):
+                print(item, "\n")
         else:
             print("command not found")
