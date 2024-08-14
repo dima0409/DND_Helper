@@ -1,5 +1,5 @@
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
-from keyboards import player_mode_keyboard
+from commands.keyboards import player_mode_keyboard
 from db.db_manager import join_session, get_available_sessions, get_users_in_session
 
 # Обработка команды /player
