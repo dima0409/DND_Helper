@@ -2,10 +2,10 @@ import time
 
 import aiosqlite
 import asyncio
-from data_models.GameModels import *
-from data_models.LocationsModel import *
-from data_models.GameRequestModel import *
-from data_models.SessionModel import *
+from db.data_models.GameModels import *
+from db.data_models.LocationsModel import *
+from db.data_models.GameRequestModel import *
+from db.data_models.SessionModel import *
 from utils import list_utils
 
 db_path = 'db/database.db'
