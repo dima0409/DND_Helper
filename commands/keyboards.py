@@ -1,4 +1,4 @@
-"""from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 
 # Главное меню
 main_menu_keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
@@ -23,4 +23,3 @@ game_edit_keyboard.add(InlineKeyboardButton("NPC", callback_data="edit_npc"))
 confirm_cancel_keyboard = InlineKeyboardMarkup()
 confirm_cancel_keyboard.add(InlineKeyboardButton("Подтвердить", callback_data="confirm_game"))
 confirm_cancel_keyboard.add(InlineKeyboardButton("Отменить", callback_data="cancel_game"))
-"""
