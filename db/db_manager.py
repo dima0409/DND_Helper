@@ -6,6 +6,8 @@ from db.data_models.GameModels import *
 from db.data_models.LocationsModel import *
 from db.data_models.GameRequestModel import *
 from db.data_models.SessionModel import *
+from db.data_models.NPCModel import *
+from db.data_models.CharacterModel import *
 from utils import list_utils
 
 db_path = 'db/database.db'
@@ -295,10 +297,63 @@ async def update_npc_name(npc_id: int, npc_name: str):
         await db.commit()
 
 
+async def get_user_npcs(user_id: int):
+    async with aiosqlite.connect(db_path) as db:
+        async with db.execute(
+                f"SELECT NPCs.game_id, Games.name, NPCs.name, NPCs.description FROM NPCs "
+                f"JOIN Games ON Games.id=NPCs.game_id "
+                f"WHERE game_id in (SELECT id FROM Games WHERE master_id={user_id})") as cursor:
+            data = await cursor.fetchall()
+        if len(data) == 0:
+            return None
+        return list(map(lambda x: UsersNPC(game_id=x[0], game_name=x[1], name=x[2], description=x[3]), data))
+
+
 async def update_npc_description(npc_id: int, npc_description: str):
     async with aiosqlite.connect(db_path) as db:
         await db.execute(f"UPDATE NPCs SET description={npc_description} WHERE id={npc_id}")
         await db.commit()
+
+
+async def add_user_character(user_id: int, character_name: str, character_pdf_path: str):
+    async with aiosqlite.connect(db_path) as db:
+        await db.execute("INSERT INTO Characters (name, owner, file_path) VALUES (?, ?, ?)",
+                         (character_name, user_id, character_pdf_path))
+        await db.commit()
+
+
+async def update_user_character_name(character_id: int, character_name: str):
+    async with aiosqlite.connect(db_path) as db:
+        await db.execute(f"UPDATE Characters SET name={character_name} WHERE id={character_id}")
+        await db.commit()
+
+
+async def delete_user_character(character_id: int):
+    async with aiosqlite.connect(db_path) as db:
+        await db.execute(f"DELETE FROM Characters WHERE id={character_id}")
+        await db.commit()
+
+
+async def get_user_characters(user_id: int):
+    async with aiosqlite.connect(db_path) as db:
+        async with db.execute(
+                f"SELECT * FROM Characters "
+                f"WHERE owner={user_id}") as cursor:
+            data = await cursor.fetchall()
+        if len(data) == 0:
+            return None
+        return list(map(lambda x: Character(character_id=x[0], name=x[1], owner=x[2], path=x[4]), data))
+
+
+async def get_character_path(character_id: int):
+    async with aiosqlite.connect(db_path) as db:
+        async with db.execute(
+                f"SELECT file_path FROM Characters "
+                f"WHERE id={character_id}") as cursor:
+            data = await cursor.fetchone()
+        if data is None:
+            return None
+        return data[0]
 
 
 def _input_number(number_name: str):
