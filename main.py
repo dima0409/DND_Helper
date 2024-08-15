@@ -6,9 +6,9 @@ import os
 from dotenv import load_dotenv
 
 from commands.info import process_help_command, process_start_command
-from commands.master_mode import process_master_mode, process_create_new_game, process_my_games, process_start_session, process_confirm_game, process_cancel_game, process_edit_game, process_create_session_command, process_answer_command
-from commands.player_mode import process_player_mode, process_join_session_command, join_callback_handler, confirm_join_callback_handler
-from commands.keyboards import main_menu_keyboard, master_mode_keyboard, game_edit_keyboard
+# from commands.master_mode import process_master_mode, process_create_new_game, process_my_games, process_start_session, process_confirm_game, process_cancel_game, process_edit_game, process_create_session_command, process_answer_command
+# from commands.player_mode import process_player_mode, process_join_session_command, join_callback_handler, confirm_join_callback_handler
+# from commands.keyboards import main_menu_keyboard, master_mode_keyboard, game_edit_keyboard
 from commands.pdf_editor import handle_docs, process_callback, process_text_input
 
 load_dotenv()
@@ -25,21 +25,21 @@ dp = Dispatcher()
 
 # Регистрируем хэндлеры
 dp.message.register(process_start_command, Command(commands='start'))
-dp.message.register(process_create_new_game, Command(commands='create_new_game'))
+"""dp.message.register(process_create_new_game, Command(commands='create_new_game'))
 dp.message.register(process_my_games, Command(commands='my_games'))
 dp.message.register(process_start_session, Command(commands='start_session'))
 dp.message.register(process_create_session_command, Command(commands='create_session'))
-dp.message.register(process_join_session_command, Command(commands='join_session'))
+dp.message.register(process_join_session_command, Command(commands='join_session'))"""
 # dp.message.register(process_deletesession_command, Command(commands='deletesession'))
-dp.message.register(process_answer_command, Command(commands='answer'))
-# dp.message.register(process_leave_command, Command(commands='leave'))
-dp.message.register(process_master_mode, Command(commands='master'))
+"""dp.message.register(process_answer_command, Command(commands='answer'))
+"""# dp.message.register(process_leave_command, Command(commands='leave'))
+"""dp.message.register(process_master_mode, Command(commands='master'))
 dp.message.register(process_player_mode, Command(commands='player'))
 dp.callback_query.register(process_confirm_game, lambda c: c.data == 'confirm_game')
 dp.callback_query.register(process_cancel_game, lambda c: c.data == 'cancel_game')
 dp.callback_query.register(process_edit_game, lambda c: c.data.startswith('edit_'))
 dp.callback_query.register(join_callback_handler, lambda c: c.data and c.data.startswith('join_'))
-dp.callback_query.register(confirm_join_callback_handler, lambda c: c.data and c.data.startswith('confirm_join_'))
+dp.callback_query.register(confirm_join_callback_handler, lambda c: c.data and c.data.startswith('confirm_join_'))"""
 # dp.callback_query.register(delete_session_callback_handler, lambda c: c.data and c.data.startswith('confirm_delete_'))
 dp.callback_query.register(process_callback, lambda c: c.data)
 dp.message.register(process_help_command, Command(commands='help'))
