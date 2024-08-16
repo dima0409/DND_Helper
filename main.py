@@ -9,7 +9,7 @@ from commands.info import process_help_command, process_start_command
 # from commands.master_mode import process_master_mode, process_create_new_game, process_my_games, process_start_session, process_confirm_game, process_cancel_game, process_edit_game, process_create_session_command, process_answer_command
 # from commands.player_mode import process_player_mode, process_join_session_command, join_callback_handler, confirm_join_callback_handler
 # from commands.keyboards import main_menu_keyboard, master_mode_keyboard, game_edit_keyboard
-from commands.pdf_editor import handle_docs, process_callback, process_text_input
+from commands.pdf_editor import handle_docs, process_callback, process_pdf_field_input
 
 load_dotenv()
 
@@ -45,7 +45,7 @@ dp.callback_query.register(process_callback, lambda c: c.data)
 dp.message.register(process_help_command, Command(commands='help'))
 # dp.message.register(process_commands_command, Command(commands='commands'))
 dp.message.register(handle_docs, Command(commands='edit'))
-dp.message.register(process_text_input)
+dp.message.register(process_pdf_field_input)
 
 
 if __name__ == '__main__':

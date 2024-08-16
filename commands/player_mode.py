@@ -1,4 +1,4 @@
-"""from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from commands.keyboards import player_mode_keyboard
 from db.db_manager import join_session, get_available_sessions, get_users_in_session
 
@@ -43,4 +43,3 @@ async def confirm_join_callback_handler(callback_query: CallbackQuery):
                 await callback_query.bot.send_message(user, f'{callback_query.from_user.full_name} присоединился к сессии "{session_id}".')
     else:
         await callback_query.message.edit_text("Неверный пароль. Подключение не удалось.")
-"""

@@ -4,11 +4,9 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from PyPDF2 import PdfReader, PdfWriter
 from PyPDF2.generic import BooleanObject, NameObject, IndirectObject
 from PIL import Image
+from commands.general import user_states
 import fitz  # PyMuPDF
 import os
-
-
-user_states = {}
 
 
 def set_need_appearances_writer(writer):
@@ -52,8 +50,6 @@ async def handle_docs(message: types.Message):
 
     await message.reply_photo(FSInputFile(os.path.join('other', f'page_{user_id}.png')),
                               reply_markup=keyboard.as_markup())
-
-
 
 
 async def process_callback(callback_query: types.CallbackQuery):
@@ -115,6 +111,7 @@ async def process_callback(callback_query: types.CallbackQuery):
     elif callback_query.data.startswith("field_"):
         current_field = callback_query.data.split("_")[1]
         state['current_field'] = current_field
+        state['text_expect'] = "PDF"
         msg = await callback_query.bot.send_message(callback_query.from_user.id,
                                                     f"Введите значение для поля {current_field}:")
         messages_to_delete.append(msg.message_id)
@@ -123,7 +120,7 @@ async def process_callback(callback_query: types.CallbackQuery):
         # Открываем PDF и редактируем его
         reader = PdfReader(os.path.join('other', 'character_sheet.pdf'))
         writer = PdfWriter()
-        set_need_appearances_writer(writer)
+        await set_need_appearances_writer(writer)
 
         for i in range(len(reader.pages)):
             page = reader.pages[i]
@@ -221,7 +218,7 @@ async def process_callback(callback_query: types.CallbackQuery):
         )
 
 
-async def process_text_input(message: types.Message):
+async def process_pdf_field_input(message: types.Message):
     user_id = message.from_user.id
 
     state = user_states[user_id]
