@@ -7,7 +7,8 @@ import os
 from dotenv import load_dotenv
 
 from commands.info import process_help_command, process_start_command
-from commands.pdf_editor import handle_docs, process_callback, process_pdf_field_input
+from commands.pdf_editor import handle_docs, process_callback
+from commands.text_commands import process_text_input
 
 load_dotenv()
 
@@ -30,7 +31,7 @@ dp.message.register(process_create_session_command, Command(commands='create_ses
 dp.message.register(process_join_session_command, Command(commands='join_session'))"""
 # dp.message.register(process_deletesession_command, Command(commands='deletesession'))
 """dp.message.register(process_answer_command, Command(commands='answer'))
-"""# dp.message.register(process_leave_command, Command(commands='leave'))
+"""  # dp.message.register(process_leave_command, Command(commands='leave'))
 """dp.message.register(process_master_mode, Command(commands='master'))
 dp.message.register(process_player_mode, Command(commands='player'))
 dp.callback_query.register(process_confirm_game, lambda c: c.data == 'confirm_game')
@@ -43,8 +44,7 @@ dp.callback_query.register(process_callback, lambda c: c.data)
 dp.message.register(process_help_command, Command(commands='help'))
 # dp.message.register(process_commands_command, Command(commands='commands'))
 dp.message.register(handle_docs, Command(commands='edit'))
-dp.message.register(process_pdf_field_input)
-
+dp.message.register(process_text_input)
 
 if __name__ == '__main__':
     try:
