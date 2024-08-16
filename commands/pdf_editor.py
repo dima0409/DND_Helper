@@ -8,14 +8,16 @@ import fitz  # PyMuPDF
 import os
 import time
 import shutil
-from db.db_manager import add_user_character, update_user_character_name, delete_user_character, get_user_characters, get_character_path
-
-user_states = {}
+from collections import defaultdict
+from commands.general import user_states
+from db.db_manager import add_user_character, update_user_character_name, delete_user_character, get_user_characters, \
+    get_character_path
 
 
 async def handle_docs(message: types.Message):
     user_id = message.from_user.id
-    user_states[user_id] = {'current_page': 0, 'current_field': None, 'data_dict': {}, 'messages_to_delete': []}
+    user_states[user_id] = defaultdict(lambda: None, current_page=0, current_field=None, data_dict={},
+                                       messages_to_delete=[])
 
     # Проверяем, есть ли у пользователя уже созданные персонажи
     existing_characters = await get_user_characters(user_id)
@@ -40,18 +42,9 @@ async def create_new_character(user_id, message):
     file_path = os.path.join('other', 'character_sheet.pdf')
 
     # Создаем дубликат PDF с именем, содержащим ID пользователя
-    edited_file_path = os.path.join('other', f'edited_{time.time()}.pdf')
+    edited_file_path = os.path.join('other', 'pdf', 'characters_sheet.pdf')
     shutil.copyfile(file_path, edited_file_path)
-    # reader = PdfReader(file_path)
-    # print(len(reader.pages))
-    # writer = PdfWriter()
-    #
-    # for i in range(len(reader.pages)):
-    #     writer.add_page(reader.pages[i])
-    #
-    # with open(edited_file_path, 'wb') as output_pdf:
-    #     writer.write(output_pdf)
-    #
+
 
     # Добавляем информацию о новом персонаже в базу данных
     character_name = "New Character"
@@ -188,7 +181,8 @@ async def process_callback(callback_query: types.CallbackQuery):
         if current_page == 0:
             fields = ['CharacterName', 'ClassLevel', 'Background', 'PlayerName', 'Race', 'Alignment']
         elif current_page == 1:
-            fields = ['ExperiencePoints', 'Strength', 'Dexterity', 'Constitution', 'Intelligence', 'Wisdom', 'Charisma', 'Appearance', 'ClanImage']
+            fields = ['ExperiencePoints', 'Strength', 'Dexterity', 'Constitution', 'Intelligence', 'Wisdom', 'Charisma',
+                      'Appearance', 'ClanImage']
         else:
             fields = ['OtherField1', 'OtherField2', 'OtherField3']
 
@@ -278,7 +272,7 @@ async def process_callback(callback_query: types.CallbackQuery):
         messages_to_delete = state['messages_to_delete']
 
 
-async def process_text_input(message: types.Message):
+async def process_pdf_text_input(message: types.Message):
     user_id = message.from_user.id
     state = user_states[user_id]
     current_field = state['current_field']

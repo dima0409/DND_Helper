@@ -1,5 +1,6 @@
 from aiogram.types import Message
 
+
 async def process_start_command(message: Message):
     await message.answer('Привет!\nНапиши /help')
 
@@ -8,5 +9,5 @@ async def process_start_command(message: Message):
 async def process_help_command(message: Message):
     await message.answer(
         "Доступные команды:`/start`, `/create`, `/join`, `/help`, `/commands`, `/deletesession`, `/answer <текст>`, `/leave`",
-        parse_mode = 'Markdown'
+        parse_mode='Markdown'
     )
