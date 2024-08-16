@@ -205,13 +205,13 @@ async def join_session(user_id: int, session_id: int, password: int):
 async def get_user_session(user_id: int):
     async with aiosqlite.connect(db_path) as db:
         async with db.execute(
-                f"""SELECT Sessions.id, Sessions.game_id, Games.name, Sessions.game_progress, 
+                f"""SELECT Sessions.id, Sessions.game_id, Games.name, Sessions.game_progress,
                 Sessions.started_at, "master" AS role
                 FROM Sessions JOIN Games ON Games.id=Sessions.game_id
                 WHERE Sessions.game_id IN (SELECT id FROM Games WHERE master_id={user_id}) UNION ALL
                 SELECT Sessions.id, Sessions.game_id, Games.name, Sessions.game_progress,
                 Sessions.started_at, "player" AS role
-                FROM Sessions JOIN Games ON Games.id=Sessions.game_id 
+                FROM Sessions JOIN Games ON Games.id=Sessions.game_id
                 WHERE Sessions.id IN (SELECT session_id FROM Session_connections WHERE user_id={user_id})""") as cursor:
             data = await cursor.fetchone()
         if data is None:
@@ -266,7 +266,7 @@ async def unblock_session(user_id: int):
 
 async def get_available_sessions(user_id: int):
     async with aiosqlite.connect(db_path) as db:
-        async with db.execute(f"""SELECT Sessions.id, Sessions.game_id, Games.name, Sessions.game_progress, 
+        async with db.execute(f"""SELECT Sessions.id, Sessions.game_id, Games.name, Sessions.game_progress,
                               Sessions.started_at
                               FROM Sessions JOIN Games ON Games.id=Sessions.game_id
                               WHERE game_id IN (SELECT game_id FROM Games_request WHERE user_id={user_id} AND approved!=0)
@@ -349,7 +349,7 @@ async def get_user_characters(user_id: int):
             data = await cursor.fetchall()
         if len(data) == 0:
             return None
-        return list(map(lambda x: Character(character_id=x[0], name=x[1], owner=x[2], path=x[4]), data))
+        return list(map(lambda x: Character(character_id=x[0], name=x[1], owner=x[2], path=x[3]), data))
 
 
 async def get_character_path(character_id: int):
