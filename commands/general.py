@@ -15,3 +15,4 @@ def process_text_input(message: types.Message):
     state = user_states[message.from_user]
     text_expect = state["text_expect"]
     if text_expect == "PDF":
+        pass
