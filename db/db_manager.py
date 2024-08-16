@@ -320,6 +320,13 @@ async def add_user_character(user_id: int, character_name: str, character_pdf_pa
         await db.execute("INSERT INTO Characters (name, owner, file_path) VALUES (?, ?, ?)",
                          (character_name, user_id, character_pdf_path))
         await db.commit()
+        async with db.execute(
+                f"SELECT id FROM Characters "
+                f"WHERE file_path={character_pdf_path}") as cursor:
+            data = await cursor.fetchone()
+        if data is None:
+            return None
+        return data[0]
 
 
 async def update_user_character_name(character_id: int, character_name: str):
