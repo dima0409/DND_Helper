@@ -8,14 +8,16 @@ import fitz  # PyMuPDF
 import os
 import time
 import shutil
-from db.db_manager import add_user_character, update_user_character_name, delete_user_character, get_user_characters, get_character_path
-
-user_states = {}
+from collections import defaultdict
+from commands.general import user_states
+from db.db_manager import add_user_character, update_user_character_name, delete_user_character, get_user_characters, \
+    get_character_path
 
 
 async def handle_docs(message: types.Message):
     user_id = message.from_user.id
-    user_states[user_id] = {'current_page': 0, 'current_field': None, 'data_dict': {}, 'messages_to_delete': []}
+    user_states[user_id] = defaultdict(lambda: None, current_page=0, current_field=None, data_dict={},
+                                       messages_to_delete=[])
 
     # Проверяем, есть ли у пользователя уже созданные персонажи
     existing_characters = await get_user_characters(user_id)
@@ -188,7 +190,8 @@ async def process_callback(callback_query: types.CallbackQuery):
         if current_page == 0:
             fields = ['CharacterName', 'ClassLevel', 'Background', 'PlayerName', 'Race', 'Alignment']
         elif current_page == 1:
-            fields = ['ExperiencePoints', 'Strength', 'Dexterity', 'Constitution', 'Intelligence', 'Wisdom', 'Charisma', 'Appearance', 'ClanImage']
+            fields = ['ExperiencePoints', 'Strength', 'Dexterity', 'Constitution', 'Intelligence', 'Wisdom', 'Charisma',
+                      'Appearance', 'ClanImage']
         else:
             fields = ['OtherField1', 'OtherField2', 'OtherField3']
 
@@ -278,7 +281,7 @@ async def process_callback(callback_query: types.CallbackQuery):
         messages_to_delete = state['messages_to_delete']
 
 
-async def process_text_input(message: types.Message):
+async def process_pdf_text_input(message: types.Message):
     user_id = message.from_user.id
     state = user_states[user_id]
     current_field = state['current_field']
