@@ -3,7 +3,6 @@ from aiogram.types import Message
 from db.db_manager import is_user_signup
 
 async def process_start_command(message: Message):
-
     await message.answer('Привет!\nНапиши /help')
 
 
