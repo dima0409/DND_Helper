@@ -13,12 +13,14 @@ from utils import list_utils
 db_path = 'db/database.db'
 
 
-async def is_user_signup(user_id: int):
+async def get_user_name(user_id: int):
     async with aiosqlite.connect(db_path) as db:
         async with db.execute(
-                f"SELECT CASE WHEN EXISTS(SELECT 1 FROM Users WHERE id={user_id}) THEN {True} ELSE {False} END;") as cursor:
+                f"SELECT name FROM Users WHERE id={user_id}") as cursor:
             answer = await cursor.fetchone()
-        return answer[0] == 1
+        if answer is None:
+            return None
+        return answer[0]
 
 
 async def signup_user(user_id: int, name: str):
@@ -48,15 +50,15 @@ async def get_user_games(user_id: int):
         return list(map(lambda x: GameModelForMaster(game_id=x[0], master=x[1], name=x[2], description=x[3]), answer))
 
 
-async def update_game_name(game_id: int, name: str):
+async def update_game_name(game_id: int, game_name: str):
     async with aiosqlite.connect(db_path) as db:
-        await db.execute(f"UPDATE Games SET name={name} WHERE id={game_id}")
+        await db.execute(f"UPDATE Games SET name = '{game_name}' WHERE id={game_id}")
         await db.commit()
 
 
 async def update_game_description(game_id: int, description: str):
     async with aiosqlite.connect(db_path) as db:
-        await db.execute(f"UPDATE Games SET description={description} WHERE id={game_id}")
+        await db.execute(f"UPDATE Games SET description='{description}' WHERE id={game_id}")
         await db.commit()
 
 
@@ -114,13 +116,13 @@ async def add_game_location(game_id: int, location_name: str, location_descripti
 
 async def change_location_name(location_id: int, location_name: str):
     async with aiosqlite.connect(db_path) as db:
-        await db.execute(f"UPDATE Locations SET name={location_name} WHERE id={location_id}")
+        await db.execute(f"UPDATE Locations SET name='{location_name}' WHERE id={location_id}")
         await db.commit()
 
 
 async def change_location_description(location_id: int, location_description: str):
     async with aiosqlite.connect(db_path) as db:
-        await db.execute(f"UPDATE Locations description name={location_description} WHERE id={location_id}")
+        await db.execute(f"UPDATE Locations description name='{location_description}' WHERE id={location_id}")
         await db.commit()
 
 
@@ -135,6 +137,20 @@ async def send_game_request(user_id: int, game_id: int):
         await db.execute("INSERT INTO Games_request (user_id, game_id, approved) VALUES (?, ?, ?)",
                          (user_id, game_id, False))
         await db.commit()
+        async with db.execute(
+                f"SELECT id FROM Games_request WHERE user_id = {user_id} AND game_id = {game_id}") as cursor:
+            data = await cursor.fetchone()
+
+        return data[0]
+
+
+async def get_game_request(request_id: int):
+    async with aiosqlite.connect(db_path) as db:
+        async with db.execute(
+                f"SELECT * FROM Games_request WHERE id = {request_id}") as cursor:
+            data = await cursor.fetchone()
+
+        return data
 
 
 async def get_users_games_request(user_id: int, only_approved: bool = False):
@@ -188,16 +204,28 @@ async def start_session(game_id: int, password: int, timestamp):
         await db.execute("INSERT INTO Sessions (game_id, started_at, game_progress, password) VALUES (?, ?, ?, ?)",
                          (game_id, timestamp, 0, password))
         await db.commit()
-
-
-async def join_session(user_id: int, session_id: int, password: int):
-    async with aiosqlite.connect(db_path) as db:
-        async with db.execute(f"SELECT password FROM Sessions WHERE game_id={game_id}") as cursor:
+        async with db.execute(f"SELECT id FROM Sessions WHERE game_id={game_id}") as cursor:
             data = await cursor.fetchone()
-        if data[0] != password:
+
+        return data[0]
+
+
+async def get_players_in_game(game_id: int):
+    async with aiosqlite.connect(db_path) as db:
+        async with db.execute(f"SELECT user_id FROM Games_request WHERE game_id={game_id} AND approved!=0") as cursor:
+            data = await cursor.fetchall()
+
+        return list(map(lambda x: x[0], data))
+
+
+async def join_session(user_id: int, game_id: int, password: int):
+    async with aiosqlite.connect(db_path) as db:
+        async with db.execute(f"SELECT id, password FROM Sessions WHERE game_id={game_id}") as cursor:
+            data = await cursor.fetchone()
+        if data[1] != password:
             return False
         await db.execute("INSERT INTO Session_connections (user_id, session_id) VALUES (?, ?)",
-                         (user_id, session_id))
+                         (user_id, data[0]))
         await db.commit()
         return True
 
@@ -293,7 +321,7 @@ async def delete_npc(npc_id: int):
 
 async def update_npc_name(npc_id: int, npc_name: str):
     async with aiosqlite.connect(db_path) as db:
-        await db.execute(f"UPDATE NPCs SET name={npc_name} WHERE id={npc_id}")
+        await db.execute(f"UPDATE NPCs SET name='{npc_name}' WHERE id={npc_id}")
         await db.commit()
 
 
@@ -309,9 +337,22 @@ async def get_user_npcs(user_id: int):
         return list(map(lambda x: UsersNPC(game_id=x[0], game_name=x[1], name=x[2], description=x[3]), data))
 
 
+async def get_game_npcs(game_id: int):
+    async with aiosqlite.connect(db_path) as db:
+        async with db.execute(
+                f"SELECT NPCs.id, NPCs.game_id, Games.name, NPCs.name, NPCs.description FROM NPCs "
+                f"JOIN Games ON Games.id=NPCs.game_id "
+                f"WHERE game_id = {game_id}") as cursor:
+            data = await cursor.fetchall()
+        if len(data) == 0:
+            return None
+        return list(
+            map(lambda x: UsersNPC(npc_id=x[0], game_id=x[1], game_name=x[2], name=x[3], description=x[4]), data))
+
+
 async def update_npc_description(npc_id: int, npc_description: str):
     async with aiosqlite.connect(db_path) as db:
-        await db.execute(f"UPDATE NPCs SET description={npc_description} WHERE id={npc_id}")
+        await db.execute(f"UPDATE NPCs SET description='{npc_description}' WHERE id={npc_id}")
         await db.commit()
 
 
@@ -331,7 +372,7 @@ async def add_user_character(user_id: int, character_name: str, character_pdf_pa
 
 async def update_user_character_name(character_id: int, character_name: str):
     async with aiosqlite.connect(db_path) as db:
-        await db.execute(f"UPDATE Characters SET name={character_name} WHERE id={character_id}")
+        await db.execute(f"UPDATE Characters SET name='{character_name}' WHERE id={character_id}")
         await db.commit()
 
 
@@ -413,7 +454,7 @@ if __name__ == "__main__":
 
         elif command == "userCheck":
             user_id = _input_user_id()
-            print("already signUp" if asyncio.run(is_user_signup(user_id))
+            print("already signUp" if asyncio.run(get_user_name(user_id))
                   else "need signUp (you can use <signUp> command)")
 
         elif command == "userUpdate":

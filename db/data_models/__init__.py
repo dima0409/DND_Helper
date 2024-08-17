@@ -1,4 +1,1 @@
-from . import GameModels
-from . import GameRequestModel
-from . import LocationsModel
-from . import SessionModel
+from . import GameModels, GameRequestModel, LocationsModel, SessionModel
