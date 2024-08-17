@@ -42,7 +42,7 @@ async def create_new_character(user_id, message):
     file_path = os.path.join('other', 'character_sheet.pdf')
 
     # Создаем дубликат PDF с именем, содержащим ID пользователя
-    edited_file_path = os.path.join('other', 'characters_sheet.pdf')
+    edited_file_path = os.path.join('other', f'characters_sheet_{time.time()}.pdf')
     shutil.copyfile(file_path, edited_file_path)
 
 
@@ -78,6 +78,9 @@ async def process_callback(callback_query: types.CallbackQuery):
     current_field = state['current_field']
     data_dict = state['data_dict']
     messages_to_delete = state['messages_to_delete']
+
+    if messages_to_delete is None:
+        messages_to_delete = []
 
     if callback_query.data == "edit_existing":
         # Получаем список персонажей пользователя
@@ -196,6 +199,7 @@ async def process_callback(callback_query: types.CallbackQuery):
     elif callback_query.data.startswith("field_"):
         current_field = callback_query.data.split("_")[1]
         state['current_field'] = current_field
+        state["text_expect"] = "PDF"
         msg = await callback_query.bot.send_message(callback_query.from_user.id,
                                                     f"Введите значение для поля {current_field}:")
         messages_to_delete.append(msg.message_id)
@@ -317,15 +321,19 @@ async def process_pdf_text_input(message: types.Message):
 
         # Обновляем PDF и создаем скриншот
         reader = PdfReader(edited_file_path)
+        print(type(reader))
         writer = PdfWriter()
+        writer.clone_reader_document_root(reader)
 
         for i in range(len(reader.pages)):
             page = reader.pages[i]
-            writer.update_page_form_field_values(page, fields=data_dict)
+            print(type(page))
             writer.add_page(page)
+            writer.update_page_form_field_values(writer.pages[i], fields=data_dict)
 
-        with open(edited_file_path, 'wb') as output_pdf:
-            writer.write(output_pdf)
+        writer.write(edited_file_path)
+        # with open(edited_file_path, 'wb') as output_pdf:
+        #     writer.write(output_pdf)
 
         # Создаем скриншот страницы
         doc = fitz.open(edited_file_path)
