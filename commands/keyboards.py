@@ -19,11 +19,25 @@ main_menu_keyboard = InlineKeyboardMarkup(
                      [master_menu_keyboard]]
 )
 
-# # Меню режима мастера
-# master_mode_keyboard = InlineKeyboardButton(resize_keyboard=True, keyboard=[
-#     [KeyboardButton(text="Создать новую игру"), KeyboardButton(text="Мои игры"),
-#      KeyboardButton(text="Начать сессию")]])
-#
+master_create = InlineKeyboardButton(
+    text='Создать новую игру',
+    callback_data='create'
+)
+master_game = InlineKeyboardButton(
+    text='Мои игры',
+    callback_data='list_g'
+)
+master_start = InlineKeyboardButton(
+    text='Начать сессию',
+    callback_data='g_start'
+)
+# Меню режима мастера
+master_menu = InlineKeyboardMarkup(
+    inline_keyboard=[[master_create],
+                     [master_game],
+                     [master_start]]
+)
+
 # # Меню режима игрока
 # player_mode_keyboard = InlineKeyboardButton(resize_keyboard=True,
 #                                             keyboard=[[KeyboardButton(text="Присоединиться к сессии")]])
@@ -41,11 +55,6 @@ main_menu_keyboard = InlineKeyboardMarkup(
 #      InlineKeyboardButton(text="Отменить", callback_data="cancel_game")]])
 #
 # dp = Dispatcher()
-#
-#
-# @dp.message(CommandStart())
-# async def send_welcome(message: Message):
-#     await message.answer("Добро пожаловать! Выберите режим:", reply_markup=main_menu_keyboard)
 #
 #
 # @dp.message(F.text == "Режим мастера")

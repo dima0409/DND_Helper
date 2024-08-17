@@ -4,7 +4,6 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 
 from ai.GPT import GPT4
-
 router = Router()
 
 
@@ -23,3 +22,4 @@ async def generate(message: Message, state: FSMContext):
 @router.message(Generate.text)
 async def generate_error(message: Message):
     await message.answer('Загрузка...')
+
