@@ -1,3 +1,4 @@
+from . import keyboards
 from . import info
 from . import general
 from . import text_commands

@@ -1,5 +1,5 @@
 import logging
-from aiogram import Bot, Dispatcher
+from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import Message
 from commands.info import process_help_command, process_start_command
@@ -29,6 +29,8 @@ dp.message.register(process_text_input)  # комент если нужен гп
 dp.include_router(router)
 
 dp.callback_query.register(process_callback, lambda c: c.data)
+
+
 
 if __name__ == '__main__':
     try:

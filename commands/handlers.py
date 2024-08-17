@@ -23,3 +23,4 @@ async def generate(message: Message, state: FSMContext):
 @router.message(Generate.text)
 async def generate_error(message: Message):
     await message.answer('Загрузка...')
+
