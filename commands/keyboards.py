@@ -1,46 +1,42 @@
-from aiogram.types import KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram import Bot, Dispatcher, types, F
+from aiogram.types import KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup
+from aiogram import Bot, Dispatcher, types, F, Router
 from aiogram.filters import Command, CommandStart
 from aiogram.types import Message, CallbackQuery
 
 # Главное меню
-player_menu_keyboard = InlineKeyboardButton(
-    text='Режим игрока',
-    callback_data='player'
+player_menu_keyboard_button = KeyboardButton(
+    text='Режим игрока'
 )
 
-master_menu_keyboard = InlineKeyboardButton(
-    text='Режим мастера',
-    callback_data='master'
+master_menu_keyboard_button = KeyboardButton(
+    text='Режим мастера'
 )
+
 # Меню
-main_menu_keyboard = InlineKeyboardMarkup(
-    inline_keyboard=[[player_menu_keyboard],
-                     [master_menu_keyboard]]
-)
+main_menu_keyboard = ReplyKeyboardMarkup(keyboard=[[master_menu_keyboard_button, player_menu_keyboard_button]],
+                                         resize_keyboard=True)
 
-master_create = InlineKeyboardButton(
-    text='Создать новую игру',
-    callback_data='create'
-)
-master_game = InlineKeyboardButton(
-    text='Мои игры',
-    callback_data='list_g'
-)
-master_start = InlineKeyboardButton(
-    text='Начать сессию',
-    callback_data='g_start'
-)
 # Меню режима мастера
-master_menu = InlineKeyboardMarkup(
-    inline_keyboard=[[master_create],
-                     [master_game],
-                     [master_start]]
+master_mode_keyboard = ReplyKeyboardMarkup(
+    keyboard=[[KeyboardButton(text='Мои игры')],
+              [KeyboardButton(text='Начать сессию')]], resize_keyboard=True
 )
 
-# # Меню режима игрока
-# player_mode_keyboard = InlineKeyboardButton(resize_keyboard=True,
-#                                             keyboard=[[KeyboardButton(text="Присоединиться к сессии")]])
+# Меню режима игрока
+player_mode_keyboard = ReplyKeyboardMarkup(
+    keyboard=[[KeyboardButton(text="Мои игры")],
+              [KeyboardButton(text="Мои персонажи")]], resize_keyboard=True)
+
+master_session_unlocked_keyboard = ReplyKeyboardMarkup(
+    keyboard=[[KeyboardButton(text="Начать игру (заблокировать подключения)")],
+              [KeyboardButton(text="Остановить сессию")], [KeyboardButton(text="Список игроков")]],
+    resize_keyboard=True)
+
+master_session_locked_keyboard = ReplyKeyboardMarkup(
+    keyboard=[[KeyboardButton(text="Остановить игру (разблокировать подключения)")],
+              [KeyboardButton(text="Остановить сессию")], [KeyboardButton(text="Список игроков")]],
+    resize_keyboard=True)
+
 #
 # # Меню редактирования игры
 # game_edit_keyboard = InlineKeyboardMarkup(
@@ -54,13 +50,13 @@ master_menu = InlineKeyboardMarkup(
 #     [InlineKeyboardButton(text="Подтвердить", callback_data="confirm_game"),
 #      InlineKeyboardButton(text="Отменить", callback_data="cancel_game")]])
 #
-# dp = Dispatcher()
-#
-#
-# @dp.message(F.text == "Режим мастера")
-# async def master_mode(message: Message):
-#     await message.answer("Выберите действие:", reply_markup=master_mode_keyboard)
-#
+dp = Dispatcher()
+
+
+@dp.callback_query(F.data == "master")
+async def master_mode(message: Message):
+    await message.answer("Добро пожаловать в режим мастера! Давайте готовиться к партии!")
+
 #
 # @dp.message(F.text == "Режим игрока")
 # async def player_mode(message: Message):

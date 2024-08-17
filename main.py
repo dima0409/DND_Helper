@@ -26,8 +26,7 @@ dp.message.register(process_start_command, Command(commands='start'))
 dp.message.register(process_help_command, Command(commands='help'))
 dp.message.register(handle_docs, Command(commands='edit'))
 dp.message.register(process_text_input)  # комент если нужен гпт
-dp.include_router(router)
-
+# dp.include_router(router)
 dp.callback_query.register(process_callback, lambda c: c.data)
 
 

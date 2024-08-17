@@ -13,12 +13,13 @@ async def process_start_command(message: Message):
         await message.answer(text=f'Привет 👋, {name}!\nНапиши /info', reply_markup=main_menu_keyboard)
     else:
         state['text_expect'] = 'User_name'
-        await message.answer(text=f'Привет 👋\nДавай знакомиться! Как тебя зовут?', reply_markup=main_menu_keyboard)
+        await message.answer(text=f'Привет 👋\nДавай знакомиться! Как тебя зовут?', reply_markup=None)
 
 
 # Этот хэндлер будет срабатывать на команду "/help"
 async def process_help_command(message: Message):
     await message.answer(
-        "Доступные команды:`/start`, `/create`, `/join`, `/help`, `/commands`, `/deletesession`, `/answer <текст>`, `/leave`",
+        "Доступные команды:`/start`, `/create`, `/join`, `/help`, `/commands`, `/deletesession`, `/answer <текст>`, "
+        "`/leave`",
         parse_mode='Markdown'
     )
