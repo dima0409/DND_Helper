@@ -322,7 +322,7 @@ async def add_user_character(user_id: int, character_name: str, character_pdf_pa
         await db.commit()
         async with db.execute(
                 f"SELECT id FROM Characters "
-                f"WHERE file_path={character_pdf_path}") as cursor:
+                f"WHERE owner = {user_id} ORDER BY id DESC") as cursor:
             data = await cursor.fetchone()
         if data is None:
             return None
