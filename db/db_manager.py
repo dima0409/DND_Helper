@@ -13,12 +13,14 @@ from utils import list_utils
 db_path = 'db/database.db'
 
 
-async def is_user_signup(user_id: int):
+async def get_user_name(user_id: int):
     async with aiosqlite.connect(db_path) as db:
         async with db.execute(
-                f"SELECT CASE WHEN EXISTS(SELECT 1 FROM Users WHERE id={user_id}) THEN {True} ELSE {False} END;") as cursor:
+                f"SELECT name FROM Users WHERE id={user_id}") as cursor:
             answer = await cursor.fetchone()
-        return answer[0] == 1
+        if answer is None:
+            return None
+        return answer[0]
 
 
 async def signup_user(user_id: int, name: str):
@@ -413,7 +415,7 @@ if __name__ == "__main__":
 
         elif command == "userCheck":
             user_id = _input_user_id()
-            print("already signUp" if asyncio.run(is_user_signup(user_id))
+            print("already signUp" if asyncio.run(get_user_name(user_id))
                   else "need signUp (you can use <signUp> command)")
 
         elif command == "userUpdate":
