@@ -42,7 +42,7 @@ async def create_new_character(user_id, message):
     file_path = os.path.join('other', 'character_sheet.pdf')
 
     # Создаем дубликат PDF с именем, содержащим ID пользователя
-    edited_file_path = os.path.join('other', 'pdf', 'characters_sheet.pdf')
+    edited_file_path = os.path.join('other', 'characters_sheet.pdf')
     shutil.copyfile(file_path, edited_file_path)
 
 

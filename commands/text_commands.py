@@ -11,7 +11,7 @@ from commands.pdf_editor import process_pdf_text_input
 from commands.general import user_states
 
 
-def process_text_input(message: types.Message):
+async def process_text_input(message: types.Message):
     state = user_states[message.from_user]
     text_expect = state["text_expect"]
     if text_expect == "PDF":
