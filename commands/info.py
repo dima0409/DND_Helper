@@ -10,7 +10,7 @@ async def process_start_command(message: Message):
     name = await get_user_name(message.from_user.id)
     if name:
         state['user_name'] = name
-        await message.answer(text=f'Привет 👋, {name}!\nНапиши /info', reply_markup=main_menu_keyboard)
+        await message.answer(text=f'Привет 👋, {name}!\nНапиши /help', reply_markup=main_menu_keyboard)
     else:
         state['text_expect'] = 'User_name'
         await message.answer(text=f'Привет 👋\nДавай знакомиться! Как тебя зовут?', reply_markup=None)

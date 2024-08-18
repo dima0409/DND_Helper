@@ -48,7 +48,7 @@ async def create_new_character(user_id, message):
     # Загружаем анкету персонажа D&D из папки other
     file_path = os.path.join('other', 'character_sheet.pdf')
 
-    # Создаем дубликат PDF с именем, содержащим ID пользователя
+    # Создаем дубликат PDF
     edited_file_path = os.path.join('other', f'characters_sheet_{time.time()}.pdf')
     shutil.copyfile(file_path, edited_file_path)
 
@@ -484,8 +484,22 @@ async def process_pdf_text_input(message: types.Message):
             await message.bot.delete_message(message.from_user.id, msg_id)
         messages_to_delete.clear()
 
-        # Отправляем сообщение "Загрузка..."
-        loading_msg = await message.bot.send_message(message.from_user.id, "Загрузка...")
+        # Путь к изображению
+        image_path = "other/img/loading.jpg"
+
+        # Создание объекта FSInputFile
+        photo = FSInputFile(image_path)
+
+        # Отправка изображения с текстом "Загрузка..."
+        loading_msg = await message.bot.send_photo(
+            chat_id=message.from_user.id,
+            photo=photo,
+            caption="Загрузка..."
+        )
+
+        # Добавление ID сообщения в список для удаления
+        messages_to_delete.append(loading_msg.message_id)
+
         messages_to_delete.append(loading_msg.message_id)
 
         # Получаем путь к файлу из базы данных
