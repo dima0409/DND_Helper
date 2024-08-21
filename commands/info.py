@@ -19,7 +19,10 @@ async def process_start_command(message: Message):
 # Этот хэндлер будет срабатывать на команду "/help"
 async def process_help_command(message: Message):
     await message.answer(
-        "Доступные команды:`/start`, `/create`, `/join`, `/help`, `/commands`, `/deletesession`, `/answer <текст>`, "
-        "`/leave`",
+        'Я ваш незаменимый спутник в мире Dungeons & Dragons.'
+        ' С моей помощью вы сможете легко найти компанию для игры, создать уникального персонажа и подготовить материалы для полного погружения в вашу вселенную.'
+        ' Давайте вместе сделаем ваши приключения в D&D еще более увлекательными и незабываемыми.\n'
+        '**Контакты:** `dnd_helper_help@gmail.com`\n'
+        'Следите за разработкой и новостями в [нашем канале](https://t.me/DevDnDMastersHelp)!',
         parse_mode='Markdown'
     )
