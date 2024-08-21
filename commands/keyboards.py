@@ -50,12 +50,12 @@ master_session_locked_keyboard = ReplyKeyboardMarkup(
 #     [InlineKeyboardButton(text="Подтвердить", callback_data="confirm_game"),
 #      InlineKeyboardButton(text="Отменить", callback_data="cancel_game")]])
 #
-dp = Dispatcher()
-
-
-@dp.callback_query(F.data == "master")
-async def master_mode(message: Message):
-    await message.answer("Добро пожаловать в режим мастера! Давайте готовиться к партии!")
+# dp = Dispatcher()
+#
+#
+# @dp.callback_query(F.data == "master")
+# async def master_mode(message: Message):
+#     await message.answer("Добро пожаловать в режим мастера! Давайте готовиться к партии!")
 
 #
 # @dp.message(F.text == "Режим игрока")

@@ -10,9 +10,13 @@ import os
 import time
 import shutil
 from collections import defaultdict
-from commands.general import user_states
+
+from aiogram.utils.media_group import MediaGroupBuilder
+
+from ai.DALLE import gen_prompt_by_descriptions, generate_images_with_gpt_prompt
+from commands.general import user_states, form_messages
 from commands.info import process_start_command
-from commands.keyboards import master_session_unlocked_keyboard
+from commands.keyboards import master_session_unlocked_keyboard, master_session_locked_keyboard
 from commands.master_mode import process_start_create_new_game
 from db.db_manager import *
 from utils.list_utils import find_first
@@ -51,7 +55,6 @@ async def create_new_character(user_id, message):
     # Создаем дубликат PDF
     edited_file_path = os.path.join('other', f'characters_sheet_{time.time()}.pdf')
     shutil.copyfile(file_path, edited_file_path)
-
 
     # Добавляем информацию о новом персонаже в базу данных
     character_name = "New Character"
@@ -301,12 +304,14 @@ async def process_callback(callback_query: types.CallbackQuery):
     elif callback_query.data.startswith("change_game_name_"):
         await callback_query.message.delete()
         state['text_expect'] = callback_query.data
-        await callback_query.bot.send_message(callback_query.from_user.id, f"Введите новое название игры:")
+        form_messages.append((await callback_query.bot.send_message(callback_query.from_user.id,
+                                                                    f"Введите новое название игры:")).message_id)
 
     elif callback_query.data.startswith("change_game_description_"):
         await callback_query.message.delete()
         state['text_expect'] = callback_query.data
-        await callback_query.bot.send_message(callback_query.from_user.id, f"Введите новое описание игры:")
+        form_messages.append((await callback_query.bot.send_message(callback_query.from_user.id,
+                                                                    f"Введите новое описание игры:")).message_id)
     elif callback_query.data.startswith("delete_game_"):
         game_id = int(callback_query.data.removeprefix("delete_game_"))
         info = await get_info_about_game(game_id)
@@ -343,14 +348,23 @@ async def process_callback(callback_query: types.CallbackQuery):
     elif callback_query.data.startswith("start_session_"):
         game_id = int(callback_query.data.removeprefix("start_session_"))
         info = await get_info_about_game(game_id)
-        state['session'] = await start_session(game_id, 1111, timestamp=time.time_ns())
-        await callback_query.bot.send_message(callback_query.from_user.id, f"Начата сессия по игре {info.name}",
-                                              reply_markup=master_session_unlocked_keyboard)
-        for player in await get_players_in_game(game_id):
-            await callback_query.bot.send_message(player, f"Начата сессия по игре {info.name}",
-                                                  reply_markup=InlineKeyboardMarkup(
-                                                      inline_keyboard=[[InlineKeyboardButton(text="Подключиться",
-                                                                                             callback_data=f"session_connect_{game_id}")]]))
+        try:
+            state['session'] = await start_session(game_id, 1111, timestamp=time.time_ns())
+            await callback_query.bot.send_message(callback_query.from_user.id, f"Начата сессия по игре {info.name}",
+                                                  reply_markup=master_session_unlocked_keyboard)
+            for player in await get_players_in_game(game_id):
+                await callback_query.bot.send_message(player, f"Начата сессия по игре {info.name}",
+                                                      reply_markup=InlineKeyboardMarkup(
+                                                          inline_keyboard=[[InlineKeyboardButton(text="Подключиться",
+                                                                                                 callback_data=f"session_connect_{game_id}")]]))
+        except:
+            session = await get_user_session(user_id)
+            info = await get_info_about_game(session.game_id)
+            await callback_query.bot.send_message(callback_query.from_user.id,
+                                                  f"Вы уже находитесь в сессии по игре {info.name}",
+                                                  reply_markup=master_session_locked_keyboard if session.in_progress else master_session_unlocked_keyboard)
+            state['session'] = session.session_id
+
     elif callback_query.data == "new_game_request":
         await callback_query.message.delete()
         state['text_expect'] = 'game_request_id'
@@ -397,6 +411,7 @@ async def process_callback(callback_query: types.CallbackQuery):
         send_list = await get_players_in_game(game_id)
         send_list.append(info.master)
         user_name = await get_user_name(user_id)
+        state['session'] = (await get_user_session(user_id)).session_id
         for user in send_list:
             if user == user_id:
                 await callback_query.bot.send_message(user,
@@ -418,7 +433,7 @@ async def process_callback(callback_query: types.CallbackQuery):
     elif callback_query.data.startswith("list_NPC_game_"):
         game_id = int(callback_query.data.removeprefix("list_NPC_game_"))
         info = await get_info_about_game(game_id)
-        npcs = await get_user_npcs(game_id)
+        npcs = await get_game_npcs(game_id)
         keyboard = []
         if npcs is not None:
             for npc in npcs:
@@ -430,25 +445,135 @@ async def process_callback(callback_query: types.CallbackQuery):
             f"NPC для игры «{info.name}» (id: {info.game_id})",
             reply_markup=InlineKeyboardMarkup(
                 inline_keyboard=keyboard))
+    elif callback_query.data.startswith("kick_player_"):
+        player_id = int(callback_query.data.removeprefix("kick_player_"))
+        name = await get_user_name(player_id)
+        await leave_session(player_id)
+        await callback_query.bot.send_message(player_id, f"Сожалеем, но вы были исключены из сессии!")
+        await callback_query.bot.send_message(user_id, f"Игрок {name} был исключен!")
+        user_states[player_id]['session'] = None
+    elif callback_query.data.startswith("create_npc_"):
+        game_id = int(callback_query.data.removeprefix("create_npc_"))
+        state['text_expect'] = f"npc_name_{game_id}"
+        form_messages.append(
+            (await callback_query.bot.send_message(user_id, f"Введите имя для нового NPC:")).message_id)
+        await callback_query.message.delete()
+    elif callback_query.data.startswith("list_locations_game_"):
+        game_id = int(callback_query.data.removeprefix("list_locations_game_"))
+        locations_list = await get_game_locations_with_parent(game_id, None)
+        info = await get_info_about_game(game_id)
+        keyboard = []
+        if locations_list is not None:
+            for location in locations_list:
+                keyboard.append(
+                    [InlineKeyboardButton(text=location.name, callback_data=f"location_{location.location_id}")])
 
-    # elif callback_query.data.startswith("list_locations_game_"):
-    #     path = list(map(int, callback_query.data.removeprefix("list_NPC_game_").split("/")))
-    #     game_id = path.pop(0)
-    #     info = await get_info_about_game(game_id)
-    #     locations = await get_game_locations(game_id)
-    #     for i in path:
-    #         locations = list_utils.find_first(locations, lambda x: x.location_id == i).sub_locations
-    #
-    #     keyboard = []
-    #     for location in locations:
-    #         keyboard.append([InlineKeyboardButton(text=location.name, callback_data=f"{npc.npc_id}")])
-    #
-    #     keyboard.append([InlineKeyboardButton(text="Создать нового NPC", callback_data=f"create_npc_{game_id}")])
-    #     keyboard.append([InlineKeyboardButton(text="← Назад", callback_data=f"materials_{game_id}")])
-    #     await callback_query.message.edit_text(
-    #         f"NPC для игры «{info.name}» (id: {info.game_id}",
-    #         reply_markup=InlineKeyboardMarkup(
-    #             inline_keyboard=keyboard))
+        keyboard.append(
+            [InlineKeyboardButton(text="Создать новую локацию", callback_data=f"create_location_{game_id}")])
+        keyboard.append([InlineKeyboardButton(text="← Назад", callback_data=f"materials_{game_id}")])
+        await callback_query.message.edit_text(f"Локации для игры «{info.name}» (id: {info.game_id})",
+                                               reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard))
+    elif callback_query.data.startswith("create_location_"):
+        info = callback_query.data.removeprefix("create_location_")
+        await callback_query.message.delete()
+
+        form_messages.append(
+            (await callback_query.bot.send_message(user_id, f"Введите название для новой локации:")).message_id)
+        state['text_expect'] = f'location_name_{info}'
+    elif callback_query.data.startswith("location_"):
+        location_id = int(callback_query.data.removeprefix("location_"))
+        info = await get_location_info(location_id)
+        keyboard = []
+        if info.sub_locations is not None:
+            for location in info.sub_locations:
+                keyboard.append(
+                    [InlineKeyboardButton(text=location.name, callback_data=f"location_{location.location_id}")])
+        keyboard.append([InlineKeyboardButton(text="Создать изображения",
+                                              callback_data=f"create_locations_images_{info.game_id}")])
+        keyboard.append([InlineKeyboardButton(text="Создать звуки окружения",
+                                              callback_data=f"create_locations_sounds_{info.game_id}")])
+        keyboard.append(
+            [InlineKeyboardButton(text="Создать новую локацию",
+                                  callback_data=f"create_location_{info.game_id}_{location_id}")])
+        keyboard.append([InlineKeyboardButton(text="Удалить", callback_data=f"delete_location_{location_id}")])
+        if info.parent_id is None:
+            keyboard.append(
+                [InlineKeyboardButton(text="← Назад", callback_data=f"list_locations_game_{info.game_id}")])
+        else:
+            keyboard.append([InlineKeyboardButton(text="← Назад", callback_data=f"location_{info.parent_id}")])
+        await callback_query.message.edit_text(f"Локация {info.name}\n{info.description}\n\nСуб-локации:",
+                                               reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard))
+    elif callback_query.data.startswith("delete_location_"):
+        location_id = int(callback_query.data.removeprefix("delete_location_"))
+        await callback_query.message.edit_text("Подтвердите удаление локации", reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="Подтвердить", callback_data=f"confirm_delete_location_{location_id}"),
+                 InlineKeyboardButton(text="Отменить", callback_data=f"location_{location_id}")]]))
+    elif callback_query.data.startswith("confirm_delete_location_"):
+        location_id = int(callback_query.data.removeprefix("confirm_delete_location_"))
+        info = await get_location_info(location_id)
+        await delete_location(location_id)
+        if info.parent_id is None:
+            locations_list = await get_game_locations_with_parent(info.game_id, None)
+            info = await get_info_about_game(info.game_id)
+            keyboard = []
+            if locations_list is not None:
+                for location in locations_list:
+                    keyboard.append(
+                        [InlineKeyboardButton(text=location.name, callback_data=f"location_{location.location_id}")])
+
+            keyboard.append(
+                [InlineKeyboardButton(text="Создать новую локацию", callback_data=f"create_location_{info.game_id}")])
+            keyboard.append([InlineKeyboardButton(text="← Назад", callback_data=f"materials_{info.game_id}")])
+            await callback_query.message.edit_text(f"Локации для игры «{info.name}» (id: {info.game_id})",
+                                                   reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard))
+        else:
+            location_id = info.parent_id
+            info = await get_location_info(location_id)
+            keyboard = [[InlineKeyboardButton(text="Создать изображения",
+                                              callback_data=f"create_locations_images_{info.game_id}")],
+                        [InlineKeyboardButton(text="Создать звуки окружения",
+                                              callback_data=f"create_locations_sounds_{info.game_id}")]]
+            if info.sub_locations is not None:
+                for location in info.sub_locations:
+                    keyboard.append(
+                        [InlineKeyboardButton(text=location.name, callback_data=f"location_{location.location_id}")])
+            keyboard.append(
+                [InlineKeyboardButton(text="Создать новую локацию",
+                                      callback_data=f"create_location_{info.game_id}_{location_id}")])
+            keyboard.append([InlineKeyboardButton(text="Удалить", callback_data=f"delete_location_{location_id}")])
+            if info.parent_id is None:
+                keyboard.append(
+                    [InlineKeyboardButton(text="← Назад", callback_data=f"list_locations_game_{info.game_id}")])
+            else:
+                keyboard.append([InlineKeyboardButton(text="← Назад", callback_data=f"location_{info.parent_id}")])
+            await callback_query.message.edit_text(f"Локация {info.name}\n{info.description}\n\nСуб-локации:",
+                                                   reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard))
+    elif callback_query.data.startswith("create_locations_images_"):
+        location_id = int(callback_query.data.removeprefix("create_locations_images_"))
+        await callback_query.message.edit_text(f"Выберите способ генерации изображения",
+                                               reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                                                   [InlineKeyboardButton(text="Сгенерировать промпт на основе описаний",
+                                                                         callback_data=f"description_create_locations_images_{location_id}")],
+                                                   [InlineKeyboardButton(text="Мой промпт",
+                                                                         callback_data=f"user_prompt_create_locations_images_{location_id}")]]))
+    elif callback_query.data.startswith("description_create_locations_images_"):
+        location_id = int(callback_query.data.removeprefix("description_create_locations_images_"))
+        location_info = await get_location_info(location_id)
+        game_info = await get_info_about_game(location_info.game_id)
+        await callback_query.message.delete()
+        await callback_query.bot.send_message(user_id, "Уже начали генерировать ваши изображения!")
+        album_builder = MediaGroupBuilder()
+        for photo in await generate_images_with_gpt_prompt(
+                gen_prompt_by_descriptions(game_description=game_info.description,
+                                           locations_description=location_info.description)):
+            album_builder.add_photo(media=photo)
+        await callback_query.bot.send_media_group(user_id, media=album_builder.build())
+    elif callback_query.data.startswith("user_prompt_create_locations_images_"):
+        location_id = int(callback_query.data.removeprefix("user_prompt_create_locations_images_"))
+        await callback_query.message.delete()
+        await callback_query.bot.send_message(user_id, "Введите промпт для генерации изображения:")
+        state['text_expect'] = f'image_prompt_location_{location_id}'
 
 
 async def process_pdf_text_input(message: types.Message):

@@ -14,7 +14,7 @@ class Generate(StatesGroup):
 
 @router.message(F.text)
 async def generate(message: Message, state: FSMContext):
-    await  state.set_state(Generate.text)
+    await state.set_state(Generate.text)
     response = await GPT4(message.text)
     await message.answer(response.choices[0].message.content)
     await state.clear()

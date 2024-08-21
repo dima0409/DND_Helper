@@ -19,6 +19,6 @@ async def GPT4(question):
             model="gpt-4o-mini"
         )
         return response
-    except openai.error.OpenAIError as e:
+    except openai.OpenAIError as e:
         print(f"An error occurred: {e}")
         return None

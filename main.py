@@ -3,7 +3,7 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import Message
 from commands.info import process_help_command, process_start_command
-from commands.handlers_dyse import send_d4_image, send_d6_image, send_d8_image, send_d10_image, send_d12_image, \
+from commands.handlers_dice import send_d4_image, send_d6_image, send_d8_image, send_d10_image, send_d12_image, \
     send_d20_image, send_d100_image
 from commands.pdf_editor import handle_docs, process_callback
 from commands.text_commands import process_text_input  # комент если нужен гпт
