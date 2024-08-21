@@ -1,3 +1,5 @@
+from fnmatch import translate
+
 from aiogram import types
 from aiogram.types import FSInputFile, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto, ReplyKeyboardMarkup, \
     KeyboardButton
@@ -193,16 +195,19 @@ async def process_callback(callback_query: types.CallbackQuery):
 
     elif callback_query.data == "select_field":
         keyboard = InlineKeyboardBuilder()
+        translated_fields = []
         if current_page == 0:
             fields = ['CharacterName', 'ClassLevel', 'Background', 'PlayerName', 'Race', 'Alignment']
+            translated_fields = ['Имя персонажа', 'Класс и уровень', 'Предыстория','Имя игрока','Раса', 'Мировоззрение']
         elif current_page == 1:
             fields = ['ExperiencePoints', 'Strength', 'Dexterity', 'Constitution', 'Intelligence', 'Wisdom', 'Charisma',
                       'Appearance', 'ClanImage']
+            translated_fields = ['Опыт','Сила','Ловкость','Телосложение', 'Интеллект','Мудрость', 'Харизма','Внешний вид','Изображение клана']
         else:
             fields = ['OtherField1', 'OtherField2', 'OtherField3']
 
-        for field in fields:
-            keyboard.button(text=field, callback_data=f"field_{field}")
+        for field,translated_field in zip(fields,translated_fields):
+            keyboard.button(text=translated_field, callback_data=f"field_{field}")
         keyboard.button(text="Назад", callback_data="back")
         keyboard.adjust(1)
 
@@ -224,12 +229,15 @@ async def process_callback(callback_query: types.CallbackQuery):
 
         reader = PdfReader(edited_file_path)
         writer = PdfWriter()
+        writer.set_need_appearances_writer()
 
         for i in range(len(reader.pages)):
             page = reader.pages[i]
+            writer.set_need_appearances_writer()
+
             writer.update_page_form_field_values(page, fields=data_dict)
             writer.add_page(page)
-
+        writer.set_need_appearances_writer()
         with open(edited_file_path, 'wb') as output_pdf:
             writer.write(output_pdf)
 
@@ -258,12 +266,13 @@ async def process_callback(callback_query: types.CallbackQuery):
 
         reader = PdfReader(edited_file_path)
         writer = PdfWriter()
-
+        writer.set_need_appearances_writer()
         for i in range(len(reader.pages)):
             page = reader.pages[i]
+            writer.set_need_appearances_writer()
             writer.update_page_form_field_values(page, fields=data_dict)
             writer.add_page(page)
-
+        writer.set_need_appearances_writer()
         with open(edited_file_path, 'wb') as output_pdf:
             writer.write(output_pdf)
 
@@ -637,14 +646,16 @@ async def process_pdf_text_input(message: types.Message):
         reader = PdfReader(edited_file_path)
         print(type(reader))
         writer = PdfWriter()
+        writer.set_need_appearances_writer()
         writer.clone_reader_document_root(reader)
-
+        writer.set_need_appearances_writer()
         for i in range(len(reader.pages)):
             page = reader.pages[i]
             print(type(page))
             writer.add_page(page)
+            writer.set_need_appearances_writer()
             writer.update_page_form_field_values(writer.pages[i], fields=data_dict)
-
+        writer.set_need_appearances_writer()
         writer.write(edited_file_path)
         # with open(edited_file_path, 'wb') as output_pdf:
         #     writer.write(output_pdf)

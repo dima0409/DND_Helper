@@ -16,7 +16,7 @@ from commands.master_mode import process_master_games, process_start_create_new_
     process_create_new_game
 from commands.player_mode import process_player_games, process_game_request
 from db.db_manager import *
-from commands.pdf_editor import process_pdf_text_input
+from commands.pdf_editor import process_pdf_text_input, handle_docs
 from commands.keyboards import *
 from ai.DALLE import *
 from commands.general import user_states, form_messages
@@ -38,6 +38,7 @@ async def process_text_input(message: types.Message):
                                  f'Я могу помочь тебе найти компанию для игры, '
                                  f'создать своего персонажа или подготовить материалы для партии!',
                                  reply_markup=main_menu_keyboard)
+
     if message.text == "Режим мастера":
         state['mode'] = 'master'
         await message.answer(f"Добро пожаловать в режим мастера! Давайте готовиться к партии!",
@@ -46,6 +47,7 @@ async def process_text_input(message: types.Message):
     elif message.text == "Режим игрока":
         state['mode'] = 'player'
         await message.answer(f"Добро пожаловать в режим игрока!", reply_markup=player_mode_keyboard)
+
     elif message.text == "Мои игры":
         if state['mode'] == 'master':
             await process_master_games(message)
@@ -53,6 +55,9 @@ async def process_text_input(message: types.Message):
             await process_player_games(message)
         else:
             await message.answer(f"Выберите режим!", reply_markup=main_menu_keyboard)
+    elif message.text == 'Мои персонажи':
+        if state['mode'] == 'player':
+            await handle_docs(message)
     elif message.text == "Начать игру (заблокировать подключения)":
         if state['mode'] == 'master':
             await db.db_manager.block_session(message.from_user.id)
@@ -109,7 +114,7 @@ async def process_text_input(message: types.Message):
             for i in players:
                 if i[0] != user_id:
                     await message.bot.send_message(i[0],
-                                                   f"{user_name}: {message.text if message.text is not None else ""}")
+                                                   f'{user_name}: {message.text if message.text is not None else ""}')
                     if message.document:
                         await message.bot.send_document(i[0], message.document.file_id)
                     elif message.sticker:
