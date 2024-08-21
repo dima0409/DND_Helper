@@ -101,10 +101,37 @@ async def get_game_locations(game_id: int):
                         for j in queue:
                             current_list = list_utils.find_first(current_list,
                                                                  lambda x: x.location_id == j).sub_locations
-                        current_list.append(GameLocation(location_id=i[0], game_id=i[1], name=i[2], description=i[3]))
+                        current_list.append(
+                            GameLocation(location_id=i[0], game_id=i[1], name=i[2], description=i[3], parent_id=i[4]))
                         added.add(i[0])
                         parents.update({i[0]: i[4]})
         return answer
+
+
+async def get_game_locations_with_parent(game_id: int, parent_id):
+    async with aiosqlite.connect(db_path) as db:
+        async with db.execute(
+                f"SELECT * FROM Locations WHERE game_id={game_id} AND parent_location_id {'IS NULL' if (parent_id is None)
+                else f'={parent_id}'}") as cursor:
+            data = await cursor.fetchall()
+
+        return list(
+            map(lambda x: GameLocation(location_id=x[0], game_id=x[1], name=x[2], description=x[3], parent_id=x[4]),
+                data))
+
+
+async def get_location_info(location_id: int):
+    async with aiosqlite.connect(db_path) as db:
+        async with db.execute(
+                f"SELECT * FROM Locations WHERE id={location_id}") as cursor:
+            data = await cursor.fetchone()
+
+        answer = GameLocation(location_id=data[0], game_id=data[1], name=data[2], description=data[3],
+                              parent_id=data[4])
+        for i in await get_game_locations_with_parent(data[1], location_id):
+            answer.add_sub_location(i)
+        return answer
+
 
 
 async def add_game_location(game_id: int, location_name: str, location_description: str, parent_location):

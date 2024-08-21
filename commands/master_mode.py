@@ -2,27 +2,28 @@ from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKe
 from commands.keyboards import master_mode_keyboard
 from db.db_manager import create_game, get_user_games, add_game_location, send_game_request, get_masters_games_request, \
     approve_request, start_session, get_users_in_session, stop_session, get_session_master
-from commands.general import user_states
+from commands.general import user_states, form_messages
 
 
 # Обработка команды создания новой игры
 async def process_start_create_new_game(callback_query):
     state = user_states[callback_query.from_user.id]
     state['text_expect'] = "new_game_name"
-    await callback_query.bot.send_message(callback_query.from_user.id, "Введите название новой игры:")
+    form_messages.append(
+        (await callback_query.bot.send_message(callback_query.from_user.id, "Введите название новой игры:")).message_id)
 
 
 async def process_enter_description_new_game(message: Message):
     state = user_states[message.from_user.id]
     state['new_game_name'] = message.text
     state['text_expect'] = "new_game_description"
-    await message.answer("Введите описание новой игры:")
+    form_messages.append((await message.answer("Введите описание новой игры:")).message_id)
 
 
 async def process_create_new_game(message: Message):
     state = user_states[message.from_user.id]
     await create_game(message.from_user.id, state['new_game_name'], message.text)
-    await message.answer(f"Создана новая игра «{state['new_game_name']}»")
+    # await message.answer(f"Создана новая игра «{state['new_game_name']}»")
 
 
 # Обработка команды мои игры

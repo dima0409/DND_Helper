@@ -2,12 +2,13 @@ from utils import str_utils
 
 
 class GameLocation:
-    def __init__(self, location_id: int, game_id: int, name: str, description: str):
+    def __init__(self, location_id: int, game_id: int, name: str, description: str, parent_id):
         self.location_id = location_id
         self.game_id = game_id
         self.name = name
         self.description = description
         self.sub_locations = []
+        self.parent_id = parent_id
 
     def add_sub_location(self, sub_location):
         self.sub_locations.append(sub_location)
