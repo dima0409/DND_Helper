@@ -15,11 +15,11 @@ from collections import defaultdict
 
 from aiogram.utils.media_group import MediaGroupBuilder
 
-from ai.DALLE import gen_prompt_by_descriptions, generate_images_with_gpt_prompt
+from ai.DALLE import gen_prompt_by_descriptions, generate_images
 from commands.general import user_states, form_messages
 from commands.info import process_start_command
 from commands.keyboards import master_session_unlocked_keyboard, master_session_locked_keyboard
-from commands.master_mode import process_start_create_new_game
+from commands.master_mode import process_start_create_new_game, process_generate_image
 from db.db_manager import *
 from utils.list_utils import find_first
 
@@ -198,15 +198,17 @@ async def process_callback(callback_query: types.CallbackQuery):
         translated_fields = []
         if current_page == 0:
             fields = ['CharacterName', 'ClassLevel', 'Background', 'PlayerName', 'Race', 'Alignment']
-            translated_fields = ['Имя персонажа', 'Класс и уровень', 'Предыстория','Имя игрока','Раса', 'Мировоззрение']
+            translated_fields = ['Имя персонажа', 'Класс и уровень', 'Предыстория', 'Имя игрока', 'Раса',
+                                 'Мировоззрение']
         elif current_page == 1:
             fields = ['ExperiencePoints', 'Strength', 'Dexterity', 'Constitution', 'Intelligence', 'Wisdom', 'Charisma',
                       'Appearance', 'ClanImage']
-            translated_fields = ['Опыт','Сила','Ловкость','Телосложение', 'Интеллект','Мудрость', 'Харизма','Внешний вид','Изображение клана']
+            translated_fields = ['Опыт', 'Сила', 'Ловкость', 'Телосложение', 'Интеллект', 'Мудрость', 'Харизма',
+                                 'Внешний вид', 'Изображение клана']
         else:
             fields = ['OtherField1', 'OtherField2', 'OtherField3']
 
-        for field,translated_field in zip(fields,translated_fields):
+        for field, translated_field in zip(fields, translated_fields):
             keyboard.button(text=translated_field, callback_data=f"field_{field}")
         keyboard.button(text="Назад", callback_data="back")
         keyboard.adjust(1)
@@ -497,10 +499,12 @@ async def process_callback(callback_query: types.CallbackQuery):
             for location in info.sub_locations:
                 keyboard.append(
                     [InlineKeyboardButton(text=location.name, callback_data=f"location_{location.location_id}")])
+        keyboard.append([InlineKeyboardButton(text="Посмотреть материалы",
+                                              callback_data=f"show_materials_{location_id}")])
         keyboard.append([InlineKeyboardButton(text="Создать изображения",
-                                              callback_data=f"create_locations_images_{info.game_id}")])
+                                              callback_data=f"create_locations_images_{location_id}")])
         keyboard.append([InlineKeyboardButton(text="Создать звуки окружения",
-                                              callback_data=f"create_locations_sounds_{info.game_id}")])
+                                              callback_data=f"create_locations_sounds_{location_id}")])
         keyboard.append(
             [InlineKeyboardButton(text="Создать новую локацию",
                                   callback_data=f"create_location_{info.game_id}_{location_id}")])
@@ -539,14 +543,18 @@ async def process_callback(callback_query: types.CallbackQuery):
         else:
             location_id = info.parent_id
             info = await get_location_info(location_id)
-            keyboard = [[InlineKeyboardButton(text="Создать изображения",
-                                              callback_data=f"create_locations_images_{info.game_id}")],
-                        [InlineKeyboardButton(text="Создать звуки окружения",
-                                              callback_data=f"create_locations_sounds_{info.game_id}")]]
+            keyboard = []
             if info.sub_locations is not None:
                 for location in info.sub_locations:
                     keyboard.append(
                         [InlineKeyboardButton(text=location.name, callback_data=f"location_{location.location_id}")])
+
+            keyboard.append([InlineKeyboardButton(text="Посмотреть материалы",
+                                                  callback_data=f"show_materials_{location_id}")])
+            keyboard.append([InlineKeyboardButton(text="Создать изображения",
+                                                  callback_data=f"create_locations_images_{location_id}")])
+            keyboard.append([InlineKeyboardButton(text="Создать звуки окружения",
+                                                  callback_data=f"create_locations_sounds_{location_id}")])
             keyboard.append(
                 [InlineKeyboardButton(text="Создать новую локацию",
                                       callback_data=f"create_location_{info.game_id}_{location_id}")])
@@ -568,21 +576,26 @@ async def process_callback(callback_query: types.CallbackQuery):
                                                                          callback_data=f"user_prompt_create_locations_images_{location_id}")]]))
     elif callback_query.data.startswith("description_create_locations_images_"):
         location_id = int(callback_query.data.removeprefix("description_create_locations_images_"))
-        location_info = await get_location_info(location_id)
-        game_info = await get_info_about_game(location_info.game_id)
-        await callback_query.message.delete()
-        await callback_query.bot.send_message(user_id, "Уже начали генерировать ваши изображения!")
-        album_builder = MediaGroupBuilder()
-        for photo in await generate_images_with_gpt_prompt(
-                gen_prompt_by_descriptions(game_description=game_info.description,
-                                           locations_description=location_info.description)):
-            album_builder.add_photo(media=photo)
-        await callback_query.bot.send_media_group(user_id, media=album_builder.build())
+        await process_generate_image(bot=callback_query.bot, user_id=user_id, location_id=location_id)
+
     elif callback_query.data.startswith("user_prompt_create_locations_images_"):
         location_id = int(callback_query.data.removeprefix("user_prompt_create_locations_images_"))
         await callback_query.message.delete()
         await callback_query.bot.send_message(user_id, "Введите промпт для генерации изображения:")
         state['text_expect'] = f'image_prompt_location_{location_id}'
+
+    elif callback_query.data.startswith("save_image_location_"):
+        location_id = int(callback_query.data.removeprefix("save_image_location_"))
+        await save_location_image(location_id, callback_query.message.photo[-1].file_id)
+        print('saved')
+    elif callback_query.data.startswith("show_materials_"):
+        location_id = int(callback_query.data.removeprefix("show_materials_"))
+        ids = await get_location_image(location_id)
+        for i in range(0, int(len(ids) / 10) + 1):
+            media = MediaGroupBuilder()
+            for j in ids[(i * 10):((i + 1) * 10)]:
+                media.add_photo(media=j)
+            await callback_query.bot.send_media_group(user_id, media=media.build())
 
 
 async def process_pdf_text_input(message: types.Message):

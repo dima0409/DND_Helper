@@ -18,6 +18,7 @@ async def GPT4(question):
                        "content": str(question)}],
             model="gpt-4o-mini"
         )
+        print(response.choices[0].message)
         return response
     except openai.OpenAIError as e:
         print(f"An error occurred: {e}")

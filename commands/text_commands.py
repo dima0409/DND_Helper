@@ -1,25 +1,16 @@
-from aiogram import types
-from aiogram.types import FSInputFile, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
-from aiogram.utils.keyboard import InlineKeyboardBuilder
-from PyPDF2 import PdfReader, PdfWriter
-from PyPDF2.generic import BooleanObject, NameObject, IndirectObject
-from PIL import Image
-import fitz  # PyMuPDF
-import os
-
 from aiogram.utils.media_group import MediaGroupBuilder
 
 import db.db_manager
-from commands.info import process_start_command
-from commands.master_mode import process_master_games, process_start_create_new_game, \
-    process_enter_description_new_game, \
-    process_create_new_game
-from commands.player_mode import process_player_games, process_game_request
-from db.db_manager import *
-from commands.pdf_editor import process_pdf_text_input, handle_docs
-from commands.keyboards import *
+import db.db_manager
 from ai.DALLE import *
 from commands.general import user_states, form_messages
+from commands.info import process_start_command
+from commands.keyboards import *
+from commands.master_mode import process_master_games, process_enter_description_new_game, \
+    process_create_new_game, process_generate_image
+from commands.pdf_editor import process_pdf_text_input, handle_docs
+from commands.player_mode import process_player_games, process_game_request
+from db.db_manager import *
 
 
 async def process_text_input(message: types.Message):
@@ -250,10 +241,12 @@ async def process_text_input(message: types.Message):
                         keyboard.append(
                             [InlineKeyboardButton(text=location.name,
                                                   callback_data=f"location_{location.location_id}")])
+                keyboard.append([InlineKeyboardButton(text="Посмотреть материалы",
+                                                      callback_data=f"show_materials_{location_id}")])
                 keyboard.append([InlineKeyboardButton(text="Создать изображения",
-                                                      callback_data=f"create_locations_images_{info.game_id}")])
+                                                      callback_data=f"create_locations_images_{info.location_id}")])
                 keyboard.append([InlineKeyboardButton(text="Создать звуки окружения",
-                                                      callback_data=f"create_locations_sounds_{info.game_id}")])
+                                                      callback_data=f"create_locations_sounds_{info.location_id}")])
                 keyboard.append(
                     [InlineKeyboardButton(text="Создать новую локацию",
                                           callback_data=f"create_location_{info.game_id}_{info.location_id}")])
@@ -267,13 +260,8 @@ async def process_text_input(message: types.Message):
                 await message.answer(f"Локация {info.name}\n{info.description}\n\nСуб-локации:",
                                      reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard))
         elif text_expect.startswith("image_prompt_location_"):
-            await message.answer("Уже начали генерировать ваши изображения!")
-            album_builder = MediaGroupBuilder(
-                caption=f"Использованный промпт - {message.text}"
-            )
-            for photo in await generate_images(message.text):
-                album_builder.add_photo(media=photo)
-            await message.answer_media_group(media=album_builder.build())
+            location_id = int(text_expect.removeprefix("image_prompt_location_"))
+            await process_generate_image(bot=message.bot, user_id=user_id, location_id=location_id, prompt=message.text)
         else:
             return
         state['text_expect'] = None
