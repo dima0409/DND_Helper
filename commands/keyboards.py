@@ -18,8 +18,7 @@ main_menu_keyboard = ReplyKeyboardMarkup(keyboard=[[master_menu_keyboard_button,
 
 # Меню режима мастера
 master_mode_keyboard = ReplyKeyboardMarkup(
-    keyboard=[[KeyboardButton(text='Мои игры')],
-              [KeyboardButton(text='Начать сессию')]], resize_keyboard=True
+    keyboard=[[KeyboardButton(text='Мои игры')]], resize_keyboard=True
 )
 
 # Меню режима игрока
