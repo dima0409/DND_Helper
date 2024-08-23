@@ -2,7 +2,8 @@ from aiogram import types
 from aiogram.utils.media_group import MediaGroupBuilder
 
 from commands.general import user_states
-from commands.keyboards import master_session_unlocked_keyboard, master_session_locked_keyboard
+from commands.keyboards import master_session_unlocked_keyboard, master_session_locked_keyboard, make_game_keyboard, \
+    location_keyboard
 from commands.master_mode import *
 from commands.pdf_editor import process_pdf_callback
 
@@ -22,13 +23,7 @@ async def process_callback(callback_query: types.CallbackQuery):
         game_id = int(callback_query.data.removeprefix("game_"))
         info = await get_info_about_game(game_id)
         await callback_query.message.edit_text(f"Игра «{info.name}» (id: {info.game_id})\n{info.description}")
-        await callback_query.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="Начать сессию", callback_data=f"start_session_{info.game_id}")],
-            [InlineKeyboardButton(text="Материалы", callback_data=f"materials_{info.game_id}")],
-            [InlineKeyboardButton(text="Изменить название", callback_data=f"change_game_name_{info.game_id}")],
-            [InlineKeyboardButton(text="Изменить описание", callback_data=f"change_game_description_{info.game_id}")],
-            [InlineKeyboardButton(text="Удалить", callback_data=f"delete_game_{info.game_id}")]
-        ]))
+        await callback_query.message.edit_reply_markup(reply_markup=make_game_keyboard(info.game_id))
     elif callback_query.data.startswith("change_game_name_"):
         await callback_query.message.delete()
         state['text_expect'] = callback_query.data
@@ -66,13 +61,7 @@ async def process_callback(callback_query: types.CallbackQuery):
         game_id = int(callback_query.data.removeprefix("cancel_delete_game_"))
         info = await get_info_about_game(game_id)
         await callback_query.message.edit_text(f"Игра «{info.name}» (id: {info.game_id})\n{info.description}")
-        await callback_query.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="Начать сессию", callback_data=f"start_session_{info.game_id}")],
-            [InlineKeyboardButton(text="Материалы", callback_data=f"materials_{info.game_id}")],
-            [InlineKeyboardButton(text="Изменить название", callback_data=f"change_game_name_{info.game_id}")],
-            [InlineKeyboardButton(text="Изменить описание", callback_data=f"change_game_description_{info.game_id}")],
-            [InlineKeyboardButton(text="Удалить", callback_data=f"delete_game_{info.game_id}")]
-        ]))
+        await callback_query.message.edit_reply_markup(reply_markup=make_game_keyboard(info.game_id))
     elif callback_query.data.startswith("start_session_"):
         game_id = int(callback_query.data.removeprefix("start_session_"))
         info = await get_info_about_game(game_id)
@@ -158,6 +147,7 @@ async def process_callback(callback_query: types.CallbackQuery):
                 inline_keyboard=[[InlineKeyboardButton(text="Локации", callback_data=f"list_locations_game_{game_id}")],
                                  [InlineKeyboardButton(text="NPC", callback_data=f"list_NPC_game_{game_id}")],
                                  [InlineKeyboardButton(text="← Назад", callback_data=f"game_{game_id}")]]))
+
     elif callback_query.data.startswith("list_NPC_game_"):
         game_id = int(callback_query.data.removeprefix("list_NPC_game_"))
         info = await get_info_about_game(game_id)
@@ -253,28 +243,10 @@ async def process_callback(callback_query: types.CallbackQuery):
     elif callback_query.data.startswith("location_"):
         location_id = int(callback_query.data.removeprefix("location_"))
         info = await get_location_info(location_id)
-        keyboard = []
-        if info.sub_locations is not None:
-            for location in info.sub_locations:
-                keyboard.append(
-                    [InlineKeyboardButton(text=location.name, callback_data=f"location_{location.location_id}")])
-        keyboard.append([InlineKeyboardButton(text="Посмотреть материалы",
-                                              callback_data=f"show_materials_{location_id}")])
-        keyboard.append([InlineKeyboardButton(text="Создать изображения",
-                                              callback_data=f"create_locations_images_{location_id}")])
-        keyboard.append([InlineKeyboardButton(text="Создать звуки окружения",
-                                              callback_data=f"create_locations_sounds_{location_id}")])
-        keyboard.append(
-            [InlineKeyboardButton(text="Создать новую локацию",
-                                  callback_data=f"create_location_{info.game_id}_{location_id}")])
-        keyboard.append([InlineKeyboardButton(text="Удалить", callback_data=f"delete_location_{location_id}")])
-        if info.parent_id is None:
-            keyboard.append(
-                [InlineKeyboardButton(text="← Назад", callback_data=f"list_locations_game_{info.game_id}")])
-        else:
-            keyboard.append([InlineKeyboardButton(text="← Назад", callback_data=f"location_{info.parent_id}")])
+
         await callback_query.message.edit_text(f"Локация {info.name}\n{info.description}\n\nСуб-локации:",
-                                               reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard))
+                                               reply_markup=InlineKeyboardMarkup(
+                                                   inline_keyboard=location_keyboard(info)))
     elif callback_query.data.startswith("delete_location_"):
         location_id = int(callback_query.data.removeprefix("delete_location_"))
         await callback_query.message.edit_text("Подтвердите удаление локации", reply_markup=InlineKeyboardMarkup(
@@ -300,29 +272,7 @@ async def process_callback(callback_query: types.CallbackQuery):
             await callback_query.message.edit_text(f"Локации для игры «{info.name}» (id: {info.game_id})",
                                                    reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard))
         else:
-            location_id = info.parent_id
-            info = await get_location_info(location_id)
-            keyboard = []
-            if info.sub_locations is not None:
-                for location in info.sub_locations:
-                    keyboard.append(
-                        [InlineKeyboardButton(text=location.name, callback_data=f"location_{location.location_id}")])
-
-            keyboard.append([InlineKeyboardButton(text="Посмотреть материалы",
-                                                  callback_data=f"show_materials_{location_id}")])
-            keyboard.append([InlineKeyboardButton(text="Создать изображения",
-                                                  callback_data=f"create_locations_images_{location_id}")])
-            keyboard.append([InlineKeyboardButton(text="Создать звуки окружения",
-                                                  callback_data=f"create_locations_sounds_{location_id}")])
-            keyboard.append(
-                [InlineKeyboardButton(text="Создать новую локацию",
-                                      callback_data=f"create_location_{info.game_id}_{location_id}")])
-            keyboard.append([InlineKeyboardButton(text="Удалить", callback_data=f"delete_location_{location_id}")])
-            if info.parent_id is None:
-                keyboard.append(
-                    [InlineKeyboardButton(text="← Назад", callback_data=f"list_locations_game_{info.game_id}")])
-            else:
-                keyboard.append([InlineKeyboardButton(text="← Назад", callback_data=f"location_{info.parent_id}")])
+            keyboard = location_keyboard(info)
             await callback_query.message.edit_text(f"Локация {info.name}\n{info.description}\n\nСуб-локации:",
                                                    reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard))
     elif callback_query.data.startswith("create_locations_images_"):
