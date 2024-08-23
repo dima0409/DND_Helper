@@ -1,8 +1,10 @@
 from typing import Union
 
-from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, InputMediaPhoto
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, InputMediaPhoto, \
+    FSInputFile
 
-from ai.DALLE import gen_prompt_by_descriptions, generate_images
+from ai.DALLE import gen_dalle_prompt_by_descriptions, generate_images, gen_dalle_NPC_prompt_by_descriptions
+from ai.stable_audio import gen_stable_audio_prompt_by_descriptions, get_audio_file
 from commands.keyboards import master_mode_keyboard
 from db.db_manager import *
 from commands.general import user_states, form_messages, provide_error
@@ -44,14 +46,15 @@ async def process_master_games(message: Message):
     await message.answer(f"Ваши игры:", reply_markup=keyboard)
 
 
-async def process_generate_image(bot, user_id, location_id: int, prompt: Union[str, None] = None):
+async def process_location_generate_image(bot, user_id, location_id: int, prompt: Union[str, None] = None):
     try:
+        await bot.send_message(user_id, "Уже начали генерировать ваши изображения!")
+
         if prompt is None:
             location_info = await get_location_info(location_id)
             game_info = await get_info_about_game(location_info.game_id)
-            await bot.send_message(user_id, "Уже начали генерировать ваши изображения!")
-            prompt = await gen_prompt_by_descriptions(game_description=game_info.description,
-                                                      locations_description=location_info.description)
+            prompt = await gen_dalle_prompt_by_descriptions(game_description=game_info.description,
+                                                            locations_description=location_info.description)
 
         if prompt is None:
             raise Exception("prompt is None!")
@@ -65,6 +68,50 @@ async def process_generate_image(bot, user_id, location_id: int, prompt: Union[s
     except Exception as e:
         print(e)
         await provide_error(bot, user_id)
+
+
+async def process_npc_generate_image(bot, user_id, npc_id: int, prompt: Union[str, None] = None):
+    try:
+        await bot.send_message(user_id, "Уже начали генерировать ваши изображения!")
+
+        if prompt is None:
+            npc_info = await get_npc_info(npc_id)
+            game_info = await get_info_about_game(npc_info.game_id)
+            prompt = await gen_dalle_NPC_prompt_by_descriptions(game_description=game_info.description,
+                                                                npc_description=npc_info.description)
+
+        if prompt is None:
+            raise Exception("prompt is None!")
+        photo = await generate_images(prompt)
+        await bot.send_photo(user_id, caption=f"Использованный промпт - {prompt}", photo=photo,
+                             reply_markup=InlineKeyboardMarkup(
+                                 inline_keyboard=[
+                                     [InlineKeyboardButton(text="Сохранить",
+                                                           callback_data=f"save_image_npc_{npc_id}"),
+                                      InlineKeyboardButton(text="Удалить", callback_data=f"npc_{npc_id}")]]))
+    except Exception as e:
+        print(e)
+        await provide_error(bot, user_id)
+
+
+async def process_generate_audio(bot, user_id, location_id: int, prompt: Union[str, None] = None):
+    # try:
+    await bot.send_message(user_id, "Уже начали генерировать!")
+
+    if prompt is None:
+        location_info = await get_location_info(location_id)
+        game_info = await get_info_about_game(location_info.game_id)
+        prompt = await gen_stable_audio_prompt_by_descriptions(game_description=game_info.description,
+                                                               locations_description=location_info.description)
+
+    if prompt is None:
+        raise Exception("prompt is None!")
+    audio = await get_audio_file(prompt)
+    await bot.send_audio(user_id, audio=FSInputFile(audio), caption=f"Использованный промпт - {prompt}",
+                         duration=30)
+    # except Exception as e:
+    #     print(e)
+    #     await provide_error(bot, user_id)
 
 # Обработка команды начала сессии
 # async def process_start_session(message: Message):

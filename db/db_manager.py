@@ -382,6 +382,18 @@ async def update_npc_description(npc_id: int, npc_description: str):
         await db.commit()
 
 
+async def get_npc_info(npc_id: int):
+    async with aiosqlite.connect(db_path) as db:
+        async with db.execute(
+                f"SELECT NPCs.id, NPCs.game_id, Games.name, NPCs.name, NPCs.description FROM NPCs "
+                f"JOIN Games ON Games.id=NPCs.game_id "
+                f"WHERE NPCs.id = {npc_id}") as cursor:
+            data = await cursor.fetchone()
+        if data is None:
+            return None
+        return UsersNPC(npc_id=data[0], game_id=data[1], game_name=data[2], name=data[3], description=data[4])
+
+
 async def add_user_character(user_id: int, character_name: str, character_pdf_path: str):
     async with aiosqlite.connect(db_path) as db:
         await db.execute("INSERT INTO Characters (name, owner, file_path) VALUES (?, ?, ?)",
@@ -419,6 +431,17 @@ async def get_user_characters(user_id: int):
         return list(map(lambda x: Character(character_id=x[0], name=x[1], owner=x[2], path=x[3]), data))
 
 
+async def get_character(character_id: int):
+    async with aiosqlite.connect(db_path) as db:
+        async with db.execute(
+                f"SELECT * FROM Characters "
+                f"WHERE id={character_id}") as cursor:
+            data = await cursor.fetchone()
+        if data is None:
+            return None
+        return Character(character_id=data[0], name=data[1], owner=data[2], path=data[3])
+
+
 async def get_character_path(character_id: int):
     async with aiosqlite.connect(db_path) as db:
         async with db.execute(
@@ -437,9 +460,25 @@ async def save_location_image(location_id: int, media_id: str):
         await db.commit()
 
 
+async def save_npc_image(npc_id: int, media_id: str):
+    async with aiosqlite.connect(db_path) as db:
+        await db.execute("INSERT INTO Generated_npc_images (nps_id, path, generated_at) VALUES (?, ?, ?)",
+                         (npc_id, media_id, time.time_ns()))
+        await db.commit()
+
+
 async def get_location_image(location_id: int):
     async with aiosqlite.connect(db_path) as db:
-        async with db.execute(f"SELECT media_id FROM Generated_location_images WHERE location_id={location_id}") as cursor:
+        async with db.execute(
+                f"SELECT media_id FROM Generated_location_images WHERE location_id={location_id}") as cursor:
+            data = await cursor.fetchall()
+        return list(map(lambda x: x[0], data))
+
+
+async def get_npc_image(npc_id: int):
+    async with aiosqlite.connect(db_path) as db:
+        async with db.execute(
+                f"SELECT path FROM Generated_npc_images WHERE nps_id={npc_id}") as cursor:
             data = await cursor.fetchall()
         return list(map(lambda x: x[0], data))
 

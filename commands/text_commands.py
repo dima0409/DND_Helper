@@ -7,8 +7,8 @@ from commands.general import user_states, form_messages
 from commands.info import process_start_command
 from commands.keyboards import *
 from commands.master_mode import process_master_games, process_enter_description_new_game, \
-    process_create_new_game, process_generate_image
-from commands.pdf_editor import process_pdf_text_input, handle_docs
+    process_create_new_game, process_location_generate_image, process_generate_audio, process_npc_generate_image
+from commands.pdf_editor import process_pdf_text_input, handle_docs, create_new_character
 from commands.player_mode import process_player_games, process_game_request
 from db.db_manager import *
 
@@ -49,6 +49,10 @@ async def process_text_input(message: types.Message):
     elif message.text == 'Мои персонажи':
         if state['mode'] == 'player':
             await handle_docs(message)
+        elif state['mode'] == 'master':
+            await message.answer(f"Для просмотра персонажей, вы должны быть в режиме игрока!")
+        else:
+            await message.answer(f"Выберите режим!", reply_markup=main_menu_keyboard)
     elif message.text == "Начать игру (заблокировать подключения)":
         if state['mode'] == 'master':
             await db.db_manager.block_session(message.from_user.id)
@@ -117,6 +121,8 @@ async def process_text_input(message: types.Message):
             return
         if text_expect == "PDF":
             await process_pdf_text_input(message)
+        elif text_expect == "Character_name":
+            await create_new_character(user_id, message, message.text)
         elif text_expect == "new_game_name":
             form_messages.append(message.message_id)
             await process_enter_description_new_game(message)
@@ -126,7 +132,6 @@ async def process_text_input(message: types.Message):
             await process_create_new_game(message)
             await process_master_games(message)
             await message.bot.delete_messages(user_id, form_messages)
-
         elif text_expect == "game_request_id":
             await process_game_request(message)
         elif text_expect.startswith("npc_name_"):
@@ -136,6 +141,11 @@ async def process_text_input(message: types.Message):
             form_messages.append((await message.answer(f"Введите описание для NPC:")).message_id)
             state['text_expect'] = f"npc_description_{game_id}"
             return
+        elif text_expect.startswith("comment_character_"):
+            character_id = int(text_expect.removeprefix("comment_character_"))
+            character_info = await get_character(character_id)
+            await message.bot.send_message(character_info.owner,
+                                           f"Комментарий мастера по вашему персонажу {character_info.name}:\n{message.text}")
         elif text_expect.startswith("npc_description_"):
             form_messages.append(message.message_id)
             game_id = int(text_expect.removeprefix("npc_description_"))
@@ -242,7 +252,7 @@ async def process_text_input(message: types.Message):
                             [InlineKeyboardButton(text=location.name,
                                                   callback_data=f"location_{location.location_id}")])
                 keyboard.append([InlineKeyboardButton(text="Посмотреть материалы",
-                                                      callback_data=f"show_materials_{location_id}")])
+                                                      callback_data=f"show_materials_{location.location_id}")])
                 keyboard.append([InlineKeyboardButton(text="Создать изображения",
                                                       callback_data=f"create_locations_images_{info.location_id}")])
                 keyboard.append([InlineKeyboardButton(text="Создать звуки окружения",
@@ -261,7 +271,14 @@ async def process_text_input(message: types.Message):
                                      reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard))
         elif text_expect.startswith("image_prompt_location_"):
             location_id = int(text_expect.removeprefix("image_prompt_location_"))
-            await process_generate_image(bot=message.bot, user_id=user_id, location_id=location_id, prompt=message.text)
+            await process_location_generate_image(bot=message.bot, user_id=user_id, location_id=location_id,
+                                                  prompt=message.text)
+        elif text_expect.startswith("sound_prompt_location_"):
+            location_id = int(text_expect.removeprefix("sound_prompt_location_"))
+            await process_generate_audio(bot=message.bot, user_id=user_id, location_id=location_id, prompt=message.text)
+        elif text_expect.startswith("image_prompt_npc_"):
+            npc_id = int(text_expect.removeprefix("image_prompt_npc_"))
+            await process_npc_generate_image(bot=message.bot, user_id=user_id, npc_id=npc_id, prompt=message.text)
         else:
             return
         state['text_expect'] = None
